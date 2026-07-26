@@ -33,6 +33,8 @@ namespace PancakeDevs.ApexPhysics
             bool shouldFollowRotation = true,
             bool preserveCurrentOffset = true)
         {
+            bool sameRelationship = physicalRoot == newPhysicalRoot && targetRoot == newTargetRoot;
+
             physicalRoot = newPhysicalRoot;
             targetRoot = newTargetRoot;
             followPosition = shouldFollowPosition;
@@ -40,7 +42,12 @@ namespace PancakeDevs.ApexPhysics
 
             if (preserveCurrentOffset)
             {
-                CaptureCurrentOffset();
+                // Rebuilding or recovering the same rig must not capture the temporary
+                // ragdoll separation as a new standing offset.
+                if (!sameRelationship || !offsetCaptured)
+                {
+                    CaptureCurrentOffset();
+                }
             }
             else
             {
