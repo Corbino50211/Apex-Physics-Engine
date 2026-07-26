@@ -200,7 +200,6 @@ namespace PancakeDevs.ApexPhysics
             BodyCollider.radius = profile.BodyRadius;
             BodyCollider.height = Mathf.Max(profile.StandingHeight, profile.BodyRadius * 2f);
             BodyCollider.center = Vector3.up * (BodyCollider.height * 0.5f);
-
             ConfigureTrackedParts();
         }
 
@@ -231,18 +230,17 @@ namespace PancakeDevs.ApexPhysics
             }
 
             Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
-            Vector3 desiredDirection = forward * movementInput.y + right * movementInput.x;
-            desiredDirection = Vector3.ClampMagnitude(desiredDirection, 1f);
-
+            Vector3 desiredDirection = Vector3.ClampMagnitude(
+                forward * movementInput.y + right * movementInput.x,
+                1f);
             Vector3 desiredVelocity = desiredDirection * profile.MovementSpeed;
             Vector3 currentVelocity = Vector3.ProjectOnPlane(Rigidbody.velocity, Vector3.up);
             float response = desiredDirection.sqrMagnitude > 0.0001f
                 ? (grounded ? profile.GroundAcceleration : profile.AirAcceleration)
                 : profile.Braking;
 
-            Vector3 acceleration = (desiredVelocity - currentVelocity) * response;
-            acceleration = Vector3.ClampMagnitude(
-                acceleration,
+            Vector3 acceleration = Vector3.ClampMagnitude(
+                (desiredVelocity - currentVelocity) * response,
                 profile.MaximumMovementAcceleration);
             Rigidbody.AddForce(acceleration, ForceMode.Acceleration);
         }
@@ -250,8 +248,7 @@ namespace PancakeDevs.ApexPhysics
         private void ApplyTurning()
         {
             targetYaw += turnInput * profile.TurnSpeed * Time.fixedDeltaTime;
-            float currentYaw = Rigidbody.rotation.eulerAngles.y;
-            float angleError = Mathf.DeltaAngle(currentYaw, targetYaw);
+            float angleError = Mathf.DeltaAngle(Rigidbody.rotation.eulerAngles.y, targetYaw);
             float torque = angleError * Mathf.Deg2Rad * profile.TurnSpring -
                            Rigidbody.angularVelocity.y * profile.TurnDamping;
             torque = Mathf.Clamp(torque, -profile.MaximumTurnTorque, profile.MaximumTurnTorque);
@@ -311,11 +308,12 @@ namespace PancakeDevs.ApexPhysics
 
         private void UpdateCapsuleHeight()
         {
-            float desiredHeight = crouchRequested
-                ? profile.CrouchingHeight
-                : profile.StandingHeight;
-
-            if (useHeadHeightForCrouch && headTarget != null)
+            float desiredHeight;
+            if (crouchRequested)
+            {
+                desiredHeight = profile.CrouchingHeight;
+            }
+            else if (useHeadHeightForCrouch && headTarget != null)
             {
                 float trackedHeight = transform.InverseTransformPoint(headTarget.position).y +
                                       profile.BodyRadius;
@@ -323,6 +321,10 @@ namespace PancakeDevs.ApexPhysics
                     trackedHeight,
                     profile.CrouchingHeight,
                     profile.StandingHeight);
+            }
+            else
+            {
+                desiredHeight = profile.StandingHeight;
             }
 
             desiredHeight = Mathf.Max(desiredHeight, profile.BodyRadius * 2f);
@@ -344,8 +346,8 @@ namespace PancakeDevs.ApexPhysics
         private bool CanUseCapsuleHeight(float height)
         {
             float radius = Mathf.Min(profile.BodyRadius, height * 0.5f) * 0.95f;
-            Vector3 bottom = transform.position + Vector3.up * radius;
-            Vector3 top = transform.position + Vector3.up * Mathf.Max(radius, height - radius);
+            Vector3 bottom = transform.position + Vector3.up * (radius + 0.02f);
+            Vector3 top = transform.position + Vector3.up * Mathf.Max(radius + 0.02f, height - radius);
 
             int overlapCount = Physics.OverlapCapsuleNonAlloc(
                 bottom,
