@@ -16,10 +16,15 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private bool rootBone;
         [SerializeField, Range(0f, 2f)] private float muscleMultiplier = 1f;
 
+        [Header("Impact Filtering")]
+        [SerializeField, Min(0f)] private float impactArmingDelay = 0.75f;
+        [SerializeField] private bool requireExternalDynamicBodyForConvertedHumanoids = true;
+
         private Rigidbody cachedRigidbody;
         private ConfigurableJoint cachedJoint;
         private Quaternion startingLocalRotation;
         private bool poseCaptured;
+        private float impactsArmedAt;
 
         public event Action<ApexRagdollBone, Collision> Impacted;
 
@@ -44,6 +49,7 @@ namespace PancakeDevs.ApexPhysics
 
         public bool IsRootBone => rootBone;
         public float MuscleMultiplier => muscleMultiplier;
+        public bool ImpactsArmed => Time.time >= impactsArmedAt;
 
         private void Reset()
         {
@@ -57,6 +63,7 @@ namespace PancakeDevs.ApexPhysics
             CacheReferences();
             PrepareJoint();
             CapturePose();
+            DelayImpacts(impactArmingDelay);
         }
 
         private void OnEnable()
@@ -71,6 +78,7 @@ namespace PancakeDevs.ApexPhysics
             rootBone = isRoot;
             PrepareJoint();
             CapturePose();
+            DelayImpacts(impactArmingDelay);
         }
 
         public void SetTarget(Transform newTarget)
@@ -82,6 +90,11 @@ namespace PancakeDevs.ApexPhysics
         public void SetMuscleMultiplier(float multiplier)
         {
             muscleMultiplier = Mathf.Clamp(multiplier, 0f, 2f);
+        }
+
+        public void DelayImpacts(float seconds)
+        {
+            impactsArmedAt = Mathf.Max(impactsArmedAt, Time.time + Mathf.Max(0f, seconds));
         }
 
         public void CapturePose()
@@ -235,16 +248,36 @@ namespace PancakeDevs.ApexPhysics
 
         private void OnCollisionEnter(Collision collision)
         {
-            if (collision != null)
+            if (collision == null || !ImpactsArmed || !ShouldReportImpact(collision))
             {
-                Impacted?.Invoke(this, collision);
+                return;
             }
+
+            Impacted?.Invoke(this, collision);
+        }
+
+        private bool ShouldReportImpact(Collision collision)
+        {
+            ApexPhysicalHumanoid convertedHumanoid = GetComponentInParent<ApexPhysicalHumanoid>();
+            if (convertedHumanoid == null || !requireExternalDynamicBodyForConvertedHumanoids)
+            {
+                return true;
+            }
+
+            Rigidbody otherBody = collision.rigidbody;
+            if (otherBody == null || otherBody.isKinematic)
+            {
+                return false;
+            }
+
+            return !otherBody.transform.IsChildOf(convertedHumanoid.transform);
         }
 
 #if UNITY_EDITOR
         private void OnValidate()
         {
             muscleMultiplier = Mathf.Clamp(muscleMultiplier, 0f, 2f);
+            impactArmingDelay = Mathf.Max(0f, impactArmingDelay);
             CacheReferences();
             PrepareJoint();
         }
