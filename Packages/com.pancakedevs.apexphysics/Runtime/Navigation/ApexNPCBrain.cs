@@ -157,6 +157,7 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
+            CacheReferences();
             chaseTarget = target;
             bool changed = currentMode != ApexNPCBehaviorMode.Chase;
             currentMode = ApexNPCBehaviorMode.Chase;
@@ -297,7 +298,10 @@ namespace PancakeDevs.ApexPhysics
             }
 
             Transform target = ResolveImpactTarget(impact.OtherRigidbody);
-            if (target == null || target == transform || target.IsChildOf(transform))
+            if (target == null ||
+                target == transform ||
+                target.IsChildOf(transform) ||
+                transform.IsChildOf(target))
             {
                 return;
             }
