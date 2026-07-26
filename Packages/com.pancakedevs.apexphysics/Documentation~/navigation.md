@@ -1,6 +1,6 @@
-# Apex Navigation and Basic NPC Movement
+# Apex Navigation, Movement, and NPC Behaviors
 
-Apex 0.0.3 introduced automatic NavMesh baking and path planning. Apex 0.0.4 adds the first force-driven NPC motor.
+Apex 0.0.3 introduced automatic NavMesh baking and path planning. Apex 0.0.4 added force-driven NPC movement. Apex 0.0.5 adds high-level Idle, Wander, and Chase behaviors.
 
 ## Create a navigation surface
 
@@ -18,12 +18,13 @@ Apex 0.0.3 introduced automatic NavMesh baking and path planning. Apex 0.0.4 add
 
 Call `MarkDirty()` after meaningful runtime geometry changes. Moving small props should normally use `NavMeshObstacle` carving instead of rebuilding the entire surface.
 
-## Create a moving basic NPC
+## Create a basic NPC
 
 1. Select the NPC root object.
 2. Choose **Apex Physics Engine > Navigation > Make Selected Object a Basic NPC**.
-3. Assign a target to `ApexNPCNavigator`, or call `SetTarget` / `SetDestination` from code.
-4. Enter Play Mode after the NavMesh has been built.
+3. Build the NavMesh.
+4. Choose a Starting Mode on `ApexNPCBrain`.
+5. Enter Play Mode.
 
 The setup command adds:
 
@@ -33,23 +34,61 @@ The setup command adds:
 - `NavMeshAgent`
 - `ApexNPCNavigator`
 - `ApexNPCMotor`
+- `ApexNPCBrain`
 
-`ApexNPCNavigator` calculates the path with direct NavMesh transform movement disabled. `ApexNPCMotor` reads the steering target and pushes the Rigidbody using forces and torque.
+`ApexNPCNavigator` calculates paths with direct NavMesh transform movement disabled. `ApexNPCMotor` reads the steering target and pushes the Rigidbody using forces and torque. `ApexNPCBrain` selects destinations and changes behavior modes.
 
-Existing 0.0.3 NPC objects may only have the navigator. Select one and click **Add Physical NPC Motor** in the navigator inspector, or run **Make Selected Object a Basic NPC** again.
+Running **Make Selected Object a Basic NPC** again upgrades an older NPC without removing its existing settings. The navigator inspector also provides repair buttons for missing motor or brain components.
+
+## Behavior modes
+
+### Idle
+
+The navigator destination is cleared and the NPC remains in place.
+
+### Wander
+
+The NPC remembers its starting position as its home point, waits for a random interval, and selects valid NavMesh destinations inside the configured wander radius. Use **Set Home Here** at runtime to move the wander center.
+
+### Chase
+
+The NPC follows the assigned Chase Target until another mode is selected. Call `SetChaseTarget` from gameplay code to begin or stop an indefinite chase.
+
+## Hard-impact retaliation
+
+When **Chase When Hit** is enabled, `ApexNPCBrain` listens to collision data from `ApexBody`.
+
+A collision triggers retaliation when either:
+
+- its relative speed reaches **Minimum Impact Speed**, or
+- its impulse reaches **Minimum Impact Impulse**.
+
+The NPC chases the Rigidbody or Apex body that caused the hit. The default chase duration is 10 seconds. Additional hard hits refresh the timer and can replace the chase target. When the timer expires, the NPC returns to the configured **Mode After Impact Chase**, which defaults to Wander.
+
+## Runtime example
 
 ```csharp
 using PancakeDevs.ApexPhysics;
 using UnityEngine;
 
-public sealed class SendNPCToTarget : MonoBehaviour
+public sealed class ControlApexNPC : MonoBehaviour
 {
-    [SerializeField] private ApexNPCNavigator navigator;
+    [SerializeField] private ApexNPCBrain brain;
     [SerializeField] private Transform target;
 
-    public void Go()
+    public void Wander()
     {
-        navigator.SetTarget(target);
+        brain.SetMode(ApexNPCBehaviorMode.Wander);
+    }
+
+    public void Chase()
+    {
+        brain.SetChaseTarget(target);
+    }
+
+    public void Stop()
+    {
+        brain.SetMode(ApexNPCBehaviorMode.Idle);
     }
 }
 ```
