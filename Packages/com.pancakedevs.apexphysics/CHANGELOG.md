@@ -2,6 +2,30 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.0.8] - 2026-07-26
+
+### Added
+
+- Combined the planned 0.0.7 active-ragdoll work and 0.0.8 physical-player work into one **Physical Characters** release.
+- `ApexRagdollProfile` for reusable muscle, root-following, knockdown, and recovery tuning.
+- `ApexRagdollBone` for ConfigurableJoint muscle drives toward matching animated target bones.
+- `ApexActiveRagdoll` with Active, Limp, and Recovering states, impact knockdowns, automatic recovery delays, and blended muscle restoration.
+- Root position and rotation following for target-driven physical skeletons.
+- Bone-name target mapping, pose capture, refresh, knockdown, and recovery editor controls.
+- `ApexPhysicalPlayerProfile` for movement, turning, jumping, crouching, body sizing, and tracked-part tuning.
+- `ApexPhysicalPlayerRig`, an input-agnostic Rigidbody player motor with ground movement, air control, braking, torque turning, jumping, tracked-height crouching, and ceiling checks.
+- `ApexTrackedBodyPart` for force-driven physical head and hand proxies with distance recovery and owner-collision filtering.
+- One-click physical-player rig generation with tracking targets and physical head/hand bodies.
+- Character setup commands and runtime inspectors under **Apex Physics Engine > Characters**.
+- Ragdoll and physical-player profile creation commands.
+
+### Notes
+
+- Active ragdolls require separate animated-target and physical skeleton hierarchies with matching local bone axes.
+- Automatic target mapping uses matching bone names; collider and joint fitting remain model-specific.
+- The physical player core intentionally does not depend on Input System or XR packages. Adapters call its public movement and tracking API.
+- Unity compilation and Play Mode physics behavior require validation in the Unity 6.2 test project before the draft release is merged.
+
 ## [0.0.6] - 2026-07-26
 
 ### Added
