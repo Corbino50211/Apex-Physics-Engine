@@ -2,6 +2,20 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.0.4] - 2026-07-26
+
+### Added
+
+- `ApexNPCMotor` for force-driven Rigidbody movement along navigator paths.
+- Configurable acceleration, braking, movement speed, turn torque, and upright stabilization.
+- Automatic Rigidbody interpolation and continuous collision setup for basic NPCs.
+- Missing-motor warning and one-click repair button in the NPC navigator inspector.
+- Live requested-velocity and Rigidbody-velocity diagnostics.
+
+### Changed
+
+- **Make Selected Object a Basic NPC** now adds Collider, Rigidbody, `ApexBody`, `NavMeshAgent`, `ApexNPCNavigator`, and `ApexNPCMotor`.
+
 ## [0.0.3] - 2026-07-26
 
 ### Added
