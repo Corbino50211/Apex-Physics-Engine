@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity physics framework for physical players, NPCs, grabbable objects, mechanisms, damage, navigation, and reusable physics-driven gameplay.",
+  "description": "A modular Unity physics framework for physical players, NPCs, grabbable objects, mechanisms, damage, navigation, automatic lighting workflows, and reusable physics-driven gameplay.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -19,7 +19,9 @@
     "navigation",
     "npc",
     "ai",
-    "behavior"
+    "behavior",
+    "lighting",
+    "lightmapping"
   ],
   "samples": [
     {
