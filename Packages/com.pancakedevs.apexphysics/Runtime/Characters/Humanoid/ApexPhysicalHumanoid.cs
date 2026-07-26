@@ -23,7 +23,8 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexHumanoidTargetRootDriver targetRootDriver;
         [SerializeField] private ApexHumanoidTrackingDriver trackingDriver;
         [SerializeField] private ApexRagdollCollisionFilter collisionFilter;
-        [SerializeField] private ApexPhysicalPlayerRig playerRig;
+        [SerializeField] private ApexHumanoidPlayerMotor humanoidPlayerMotor;
+        [SerializeField] private ApexPhysicalPlayerRig legacyPlayerRig;
         [SerializeField] private ApexNPCNavigator npcNavigator;
         [SerializeField] private ApexNPCMotor npcMotor;
         [SerializeField] private ApexNPCBrain npcBrain;
@@ -38,7 +39,8 @@ namespace PancakeDevs.ApexPhysics
         public ApexHumanoidTargetRootDriver TargetRootDriver => targetRootDriver;
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
         public ApexRagdollCollisionFilter CollisionFilter => collisionFilter;
-        public ApexPhysicalPlayerRig PlayerRig => playerRig;
+        public ApexHumanoidPlayerMotor HumanoidPlayerMotor => humanoidPlayerMotor;
+        public ApexPhysicalPlayerRig LegacyPlayerRig => legacyPlayerRig;
         public ApexNPCNavigator NPCNavigator => npcNavigator;
         public ApexNPCMotor NPCMotor => npcMotor;
         public ApexNPCBrain NPCBrain => npcBrain;
@@ -54,7 +56,7 @@ namespace PancakeDevs.ApexPhysics
             ApexHumanoidTargetRootDriver newTargetRootDriver,
             ApexHumanoidTrackingDriver newTrackingDriver,
             ApexRagdollCollisionFilter newCollisionFilter,
-            ApexPhysicalPlayerRig newPlayerRig,
+            ApexHumanoidPlayerMotor newHumanoidPlayerMotor,
             ApexNPCNavigator newNpcNavigator,
             ApexNPCMotor newNpcMotor,
             ApexNPCBrain newNpcBrain)
@@ -69,7 +71,8 @@ namespace PancakeDevs.ApexPhysics
             targetRootDriver = newTargetRootDriver;
             trackingDriver = newTrackingDriver;
             collisionFilter = newCollisionFilter;
-            playerRig = newPlayerRig;
+            humanoidPlayerMotor = newHumanoidPlayerMotor;
+            legacyPlayerRig = null;
             npcNavigator = newNpcNavigator;
             npcMotor = newNpcMotor;
             npcBrain = newNpcBrain;
