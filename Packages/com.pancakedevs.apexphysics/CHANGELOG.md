@@ -2,6 +2,35 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.1.5] - 2026-07-26
+
+### Added
+
+- `ApexHumanoidLocoballRig`, a floor-aligned locomotion sphere generated beneath supported physical NPCs.
+- Explicit left and right locoball foot anchors.
+- `ApexHumanoidFootTether` spring constraints that keep articulated feet near the locomotion core without hard-locking the knees.
+- Limp-state tether slack so the complete humanoid can still ragdoll naturally after a real knockdown.
+- **Apex Physics Engine > Characters > Rebuild Selected NPC Locoball** for upgrading existing generated NPCs in Edit Mode.
+- Automatic locoball installation for new and existing converted physical NPCs.
+
+### Fixed
+
+- The simplified support Rigidbody is now rebased around the physical hips instead of leaving its generated collision geometry effectively centered near scene Y = 0.
+- Torso and lower-body support colliders are regenerated from actual hips, chest, sole, and ground positions.
+- The old embedded ground sphere is replaced by a dedicated child locoball at the detected floor height.
+- Converted humanoids ignore startup, static-floor, kinematic, and internal generated-body impacts when deciding whether to enter Limp.
+- Manual support-body repositioning and initial physics settling no longer count as real knockdown hits.
+
+### Changed
+
+- Real knockdowns on converted humanoids now require a dynamic external Rigidbody impact by default.
+- Foot tethers are strong while Active or Recovering and become slack while Limp.
+
+### Notes
+
+- Existing NPCs do not need to be deleted. Update the package, exit Play Mode, select the generated physical NPC, and run **Rebuild Selected NPC Locoball** once.
+- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 test project before the draft release is merged.
+
 ## [0.1.4] - 2026-07-26
 
 ### Fixed
