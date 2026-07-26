@@ -13,6 +13,8 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexPhysicalPlayerProfile profile;
         [SerializeField] private ApexActiveRagdoll activeRagdoll;
         [SerializeField] private Transform orientationSource;
+        [SerializeField] private Transform leftFoot;
+        [SerializeField] private Transform rightFoot;
 
         [Header("Balance")]
         [SerializeField, Min(0f)] private float balanceSpring = 140f;
@@ -30,6 +32,8 @@ namespace PancakeDevs.ApexPhysics
 
         public ApexPhysicalPlayerProfile Profile => profile;
         public ApexActiveRagdoll ActiveRagdoll => activeRagdoll;
+        public Transform LeftFoot => leftFoot;
+        public Transform RightFoot => rightFoot;
         public bool IsGrounded => grounded;
         public Vector3 GroundNormal => groundNormal;
         public Vector2 MoveInput => moveInput;
@@ -42,6 +46,7 @@ namespace PancakeDevs.ApexPhysics
         {
             cachedRigidbody = GetComponent<Rigidbody>();
             targetYaw = transform.eulerAngles.y;
+            RefreshFootReferences();
         }
 
         private void FixedUpdate()
@@ -74,6 +79,13 @@ namespace PancakeDevs.ApexPhysics
             activeRagdoll = ragdoll;
             orientationSource = newOrientationSource;
             targetYaw = transform.eulerAngles.y;
+            RefreshFootReferences();
+        }
+
+        public void SetFootReferences(Transform newLeftFoot, Transform newRightFoot)
+        {
+            leftFoot = newLeftFoot;
+            rightFoot = newRightFoot;
         }
 
         public void SetMoveInput(Vector2 input)
@@ -101,6 +113,18 @@ namespace PancakeDevs.ApexPhysics
             moveInput = Vector2.zero;
             turnInput = 0f;
             jumpRequested = false;
+        }
+
+        public void RefreshFootReferences()
+        {
+            Animator physicalAnimator = GetComponentInParent<Animator>();
+            if (physicalAnimator == null || !physicalAnimator.isHuman)
+            {
+                return;
+            }
+
+            leftFoot = physicalAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            rightFoot = physicalAnimator.GetBoneTransform(HumanBodyBones.RightFoot);
         }
 
         private float GetControlStrength()
@@ -185,14 +209,37 @@ namespace PancakeDevs.ApexPhysics
 
         private void UpdateGrounding()
         {
-            float radius = profile.GroundProbeRadius;
-            Vector3 origin = Rigidbody.worldCenterOfMass + Vector3.up * 0.05f;
+            if (leftFoot == null && rightFoot == null)
+            {
+                RefreshFootReferences();
+            }
+
+            float radius = Mathf.Max(0.03f, profile.GroundProbeRadius * 0.5f);
+            Vector3 footPosition;
+            if (leftFoot != null && rightFoot != null)
+            {
+                footPosition = (leftFoot.position + rightFoot.position) * 0.5f;
+            }
+            else if (leftFoot != null)
+            {
+                footPosition = leftFoot.position;
+            }
+            else if (rightFoot != null)
+            {
+                footPosition = rightFoot.position;
+            }
+            else
+            {
+                footPosition = Rigidbody.worldCenterOfMass - Vector3.up * 0.8f;
+            }
+
+            Vector3 origin = footPosition + Vector3.up * (radius + 0.03f);
             int count = Physics.SphereCastNonAlloc(
                 origin,
                 radius,
                 Vector3.down,
                 groundHits,
-                profile.GroundProbeDistance + radius,
+                profile.GroundProbeDistance + 0.06f,
                 profile.GroundLayers,
                 QueryTriggerInteraction.Ignore);
 
@@ -202,7 +249,9 @@ namespace PancakeDevs.ApexPhysics
             for (int i = 0; i < count; i++)
             {
                 RaycastHit hit = groundHits[i];
-                if (hit.collider == null || hit.rigidbody == Rigidbody || hit.collider.transform.IsChildOf(transform.root))
+                if (hit.collider == null ||
+                    hit.rigidbody == Rigidbody ||
+                    hit.collider.transform.IsChildOf(transform.root))
                 {
                     continue;
                 }
