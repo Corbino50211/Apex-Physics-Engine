@@ -2,7 +2,8 @@
   "name": "PancakeDevs.ApexPhysics.Editor",
   "rootNamespace": "PancakeDevs.ApexPhysics.Editor",
   "references": [
-    "PancakeDevs.ApexPhysics.Runtime"
+    "PancakeDevs.ApexPhysics.Runtime",
+    "Unity.AI.Navigation"
   ],
   "includePlatforms": [
     "Editor"
