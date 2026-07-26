@@ -6,11 +6,11 @@ namespace PancakeDevs.ApexPhysics.Editor
 {
     internal static class ApexInteractionMenu
     {
-        private const string MakeGrabbablePath = "GameObject/Apex Physics/Make Selected Object Grabbable";
-        private const string MakeGrabberPath = "GameObject/Apex Physics/Make Selected Object a Grabber";
-        private const string AddGrabPointPath = "GameObject/Apex Physics/Add Grab Point";
+        private const string MakeGrabbablePath = "Apex Physics Engine/Grabbing/Make Selected Object Grabbable";
+        private const string MakeGrabberPath = "Apex Physics Engine/Grabbing/Make Selected Object a Grabber";
+        private const string AddGrabPointPath = "Apex Physics Engine/Grabbing/Add Grab Point";
 
-        [MenuItem(MakeGrabbablePath, false, 21)]
+        [MenuItem(MakeGrabbablePath, false, 20)]
         private static void MakeSelectedObjectGrabbable()
         {
             GameObject selected = Selection.activeGameObject;
@@ -47,7 +47,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             Selection.activeGameObject = selected;
         }
 
-        [MenuItem(MakeGrabberPath, false, 22)]
+        [MenuItem(MakeGrabberPath, false, 21)]
         private static void MakeSelectedObjectGrabber()
         {
             GameObject selected = Selection.activeGameObject;
@@ -65,7 +65,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             Selection.activeGameObject = selected;
         }
 
-        [MenuItem(AddGrabPointPath, false, 23)]
+        [MenuItem(AddGrabPointPath, false, 22)]
         private static void AddGrabPoint()
         {
             GameObject selected = Selection.activeGameObject;
