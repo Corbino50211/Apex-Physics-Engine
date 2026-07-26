@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using PancakeDevs.ApexPhysics;
@@ -16,7 +17,7 @@ namespace PancakeDevs.ApexPhysics.Editor
         [MenuItem(Root + "Create Warehouse", false, 10)]
         private static void CreateWarehouse()
         {
-            ApexWarehouse existing = Object.FindFirstObjectByType<ApexWarehouse>();
+            ApexWarehouse existing = UnityEngine.Object.FindFirstObjectByType<ApexWarehouse>();
             if (existing != null)
             {
                 Selection.activeGameObject = existing.gameObject;
@@ -93,10 +94,11 @@ namespace PancakeDevs.ApexPhysics.Editor
         [MenuItem(Root + "Create Crate Spawner", false, 30)]
         private static void CreateCrateSpawner()
         {
+            UnityEngine.Object previousSelection = Selection.activeObject;
             GameObject spawnerObject = new GameObject("Apex Crate Spawner");
             Undo.RegisterCreatedObjectUndo(spawnerObject, "Create Apex Crate Spawner");
 
-            GameObject selectedSceneObject = Selection.activeGameObject;
+            GameObject selectedSceneObject = previousSelection as GameObject;
             if (selectedSceneObject != null && !EditorUtility.IsPersistent(selectedSceneObject))
             {
                 spawnerObject.transform.SetParent(selectedSceneObject.transform, false);
@@ -109,13 +111,63 @@ namespace PancakeDevs.ApexPhysics.Editor
             }
 
             ApexCrateSpawner spawner = Undo.AddComponent<ApexCrateSpawner>(spawnerObject);
-            if (Selection.activeObject is ApexSpawnableCrate selectedCrate)
+            if (previousSelection is ApexSpawnableCrate selectedCrate)
             {
                 spawner.SetCrate(selectedCrate);
             }
 
             Selection.activeGameObject = spawnerObject;
             EditorGUIUtility.PingObject(spawnerObject);
+        }
+
+        [MenuItem(Root + "Validate Warehouse Assets", false, 90)]
+        private static void ValidateWarehouseAssets()
+        {
+            string[] crateGuids = AssetDatabase.FindAssets("t:ApexCrate");
+            Dictionary<string, ApexCrate> cratesByBarcode =
+                new Dictionary<string, ApexCrate>(StringComparer.OrdinalIgnoreCase);
+            int errors = 0;
+
+            for (int i = 0; i < crateGuids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(crateGuids[i]);
+                ApexCrate crate = AssetDatabase.LoadAssetAtPath<ApexCrate>(path);
+                if (crate == null)
+                {
+                    continue;
+                }
+
+                crate.EnsureBarcode();
+                EditorUtility.SetDirty(crate);
+
+                if (cratesByBarcode.TryGetValue(crate.Barcode, out ApexCrate duplicate))
+                {
+                    Debug.LogError(
+                        $"Duplicate Apex barcode '{crate.Barcode}' on '{duplicate.name}' and '{crate.name}'.",
+                        crate);
+                    errors++;
+                }
+                else
+                {
+                    cratesByBarcode.Add(crate.Barcode, crate);
+                }
+
+                if (crate is ApexSpawnableCrate spawnable && spawnable.Prefab == null)
+                {
+                    Debug.LogError($"Apex spawnable crate '{crate.name}' has no prefab.", crate);
+                    errors++;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            if (errors == 0)
+            {
+                Debug.Log($"Apex Warehouse validation passed for {cratesByBarcode.Count} crate(s).");
+            }
+            else
+            {
+                Debug.LogError($"Apex Warehouse validation found {errors} error(s). Check the Console entries above.");
+            }
         }
 
         [MenuItem(Root + "Create Spawnable Crate From Selected Prefab", true)]
@@ -140,7 +192,7 @@ namespace PancakeDevs.ApexPhysics.Editor
         private static List<ApexCrate> GetSelectedCrates()
         {
             List<ApexCrate> crates = new List<ApexCrate>();
-            Object[] selectedObjects = Selection.objects;
+            UnityEngine.Object[] selectedObjects = Selection.objects;
             for (int i = 0; i < selectedObjects.Length; i++)
             {
                 if (selectedObjects[i] is ApexCrate crate && !crates.Contains(crate))
