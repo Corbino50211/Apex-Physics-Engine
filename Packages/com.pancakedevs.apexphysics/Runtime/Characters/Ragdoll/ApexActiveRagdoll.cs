@@ -109,9 +109,41 @@ namespace PancakeDevs.ApexPhysics
             }
         }
 
+        public void Configure(
+            ApexRagdollProfile newProfile,
+            Animator newTargetAnimator,
+            ApexRagdollBone newRootBone,
+            bool shouldDriveRootPosition,
+            bool shouldDriveRootRotation)
+        {
+            profile = newProfile;
+            targetAnimator = newTargetAnimator;
+            rootBone = newRootBone;
+            driveRootPosition = shouldDriveRootPosition;
+            driveRootRotation = shouldDriveRootRotation;
+            RefreshBones();
+            CaptureCurrentPose();
+        }
+
         public void SetProfile(ApexRagdollProfile newProfile)
         {
             profile = newProfile;
+        }
+
+        public void SetTargetAnimator(Animator animator)
+        {
+            targetAnimator = animator;
+        }
+
+        public void SetRootBone(ApexRagdollBone bone)
+        {
+            rootBone = bone;
+        }
+
+        public void SetRootFollowing(bool position, bool rotation)
+        {
+            driveRootPosition = position;
+            driveRootRotation = rotation;
         }
 
         public void SetGlobalStrength(float strength)
