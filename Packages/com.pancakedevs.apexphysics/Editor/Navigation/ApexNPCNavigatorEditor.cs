@@ -12,15 +12,32 @@ namespace PancakeDevs.ApexPhysics.Editor
             DrawDefaultInspector();
 
             ApexNPCNavigator navigator = (ApexNPCNavigator)target;
+            ApexNPCMotor motor = navigator.GetComponent<ApexNPCMotor>();
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Apex NPC Navigation", EditorStyles.boldLabel);
 
+            if (motor == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "This object can calculate a path, but it cannot move because ApexNPCMotor is missing.",
+                    MessageType.Warning);
+
+                if (GUILayout.Button("Add Physical NPC Motor"))
+                {
+                    Undo.AddComponent<ApexNPCMotor>(navigator.gameObject);
+                    EditorUtility.SetDirty(navigator.gameObject);
+                    return;
+                }
+            }
+
             if (!Application.isPlaying)
             {
                 EditorGUILayout.HelpBox(
-                    "Enter Play Mode to inspect live path data. Version 0.0.3 calculates paths but does not yet apply physical walking forces.",
-                    MessageType.Info);
+                    motor != null
+                        ? "This NPC has a physical motor. Enter Play Mode to test movement and inspect live path data."
+                        : "Add the physical motor above, then enter Play Mode.",
+                    motor != null ? MessageType.Info : MessageType.Warning);
                 return;
             }
 
@@ -32,6 +49,20 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorGUILayout.FloatField("Remaining Distance", navigator.RemainingDistance);
             EditorGUILayout.Vector3Field("Desired Velocity", navigator.DesiredVelocity);
             EditorGUILayout.Vector3Field("Steering Target", navigator.SteeringTarget);
+
+            if (motor != null)
+            {
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField("Physical Motor", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Moving", motor.IsMoving ? "Yes" : "No");
+                EditorGUILayout.Vector3Field("Requested Velocity", motor.RequestedVelocity);
+
+                Rigidbody rigidbody = motor.Body != null ? motor.Body.Rigidbody : null;
+                if (rigidbody != null)
+                {
+                    EditorGUILayout.Vector3Field("Rigidbody Velocity", rigidbody.velocity);
+                }
+            }
 
             using (new EditorGUILayout.HorizontalScope())
             {
