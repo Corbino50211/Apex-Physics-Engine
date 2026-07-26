@@ -2,6 +2,25 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.0.6] - 2026-07-26
+
+### Added
+
+- Editor-only `ApexLightingBaker` workflow for automatic lightmap generation.
+- Optional bake-before-play interception with automatic Play Mode resume.
+- Scene dirty detection based on baked lights, GI renderers, meshes, terrains, reflection probes, Render Settings, and Lighting Settings.
+- Missing-lighting-data detection so unbaked scenes are generated automatically.
+- Preview, Production, and Custom bake-quality presets.
+- Reflection-probe baking for enabled Baked-mode probes.
+- Bake progress, cancellation, clear-data, mark-dirty, and manual bake controls.
+- Persistent project-wide lighting settings with per-scene last-bake hashes and timestamps.
+- Dedicated **Apex Physics Engine > Lighting** top-bar menu and Lighting Baker window.
+
+### Notes
+
+- Lighting generation is an Editor workflow. Standalone builds load lighting data baked in the Editor.
+- Unity compilation and Play Mode behavior require validation in a Unity 6 project before the draft release is merged.
+
 ## [0.0.5] - 2026-07-26
 
 ### Added
