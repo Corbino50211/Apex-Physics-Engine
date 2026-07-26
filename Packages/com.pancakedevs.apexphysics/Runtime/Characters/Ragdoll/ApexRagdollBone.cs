@@ -69,6 +69,7 @@ namespace PancakeDevs.ApexPhysics
         {
             target = newTarget;
             rootBone = isRoot;
+            PrepareJoint();
             CapturePose();
         }
 
@@ -92,6 +93,19 @@ namespace PancakeDevs.ApexPhysics
         public void ApplyMuscle(ApexRagdollProfile profile, float strength)
         {
             CacheReferences();
+
+            // A converted supported humanoid connects its root hips joint to a separate
+            // simplified support Rigidbody instead of the hips' normal skeleton parent.
+            // The ordinary local-space muscle equation is invalid for that relationship
+            // and can fold the whole character around the support body. The support body
+            // owns the root pose, so keep that connection rigid and do not apply a second
+            // rotational muscle drive to the hips.
+            if (IsSupportConnectedRoot())
+            {
+                ConfigureSupportedRootConstraint();
+                return;
+            }
+
             if (profile == null || cachedJoint == null || target == null)
             {
                 DisableMuscle();
@@ -138,6 +152,33 @@ namespace PancakeDevs.ApexPhysics
             cachedJoint.slerpDrive = drive;
         }
 
+        private bool IsSupportConnectedRoot()
+        {
+            return rootBone && cachedJoint != null && cachedJoint.connectedBody != null;
+        }
+
+        private void ConfigureSupportedRootConstraint()
+        {
+            if (cachedJoint == null)
+            {
+                return;
+            }
+
+            cachedJoint.xMotion = ConfigurableJointMotion.Locked;
+            cachedJoint.yMotion = ConfigurableJointMotion.Locked;
+            cachedJoint.zMotion = ConfigurableJointMotion.Locked;
+            cachedJoint.angularXMotion = ConfigurableJointMotion.Locked;
+            cachedJoint.angularYMotion = ConfigurableJointMotion.Locked;
+            cachedJoint.angularZMotion = ConfigurableJointMotion.Locked;
+            cachedJoint.targetAngularVelocity = Vector3.zero;
+
+            JointDrive drive = cachedJoint.slerpDrive;
+            drive.positionSpring = 0f;
+            drive.positionDamper = 0f;
+            drive.maximumForce = 0f;
+            cachedJoint.slerpDrive = drive;
+        }
+
         private void PrepareJoint()
         {
             if (cachedJoint == null)
@@ -147,6 +188,11 @@ namespace PancakeDevs.ApexPhysics
 
             cachedJoint.configuredInWorldSpace = false;
             cachedJoint.rotationDriveMode = RotationDriveMode.Slerp;
+
+            if (IsSupportConnectedRoot())
+            {
+                ConfigureSupportedRootConstraint();
+            }
         }
 
         private void CacheReferences()
