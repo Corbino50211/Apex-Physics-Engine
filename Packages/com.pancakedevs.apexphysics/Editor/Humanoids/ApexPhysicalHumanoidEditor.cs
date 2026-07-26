@@ -29,6 +29,11 @@ namespace PancakeDevs.ApexPhysics.Editor
                     MessageType.Error);
             }
 
+            if (humanoid.Mode == ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                DrawSupportRigControls(humanoid);
+            }
+
             if (!Application.isPlaying)
             {
                 EditorGUILayout.HelpBox(
@@ -49,6 +54,53 @@ namespace PancakeDevs.ApexPhysics.Editor
             }
 
             Repaint();
+        }
+
+        private static void DrawSupportRigControls(ApexPhysicalHumanoid humanoid)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Supported Physics Core", EditorStyles.boldLabel);
+
+            ApexHumanoidSupportRig supportRig = humanoid.SupportRig != null
+                ? humanoid.SupportRig
+                : humanoid.GetComponent<ApexHumanoidSupportRig>();
+
+            if (supportRig == null)
+            {
+                EditorGUILayout.HelpBox(
+                    "This NPC is using the older hips-only setup. Install the supported physics core to prevent it from immediately collapsing.",
+                    MessageType.Warning);
+
+                if (GUILayout.Button("Install Supported Physics Core", GUILayout.Height(30f)))
+                {
+                    Undo.RecordObject(humanoid, "Install Apex Humanoid Support Rig");
+                    supportRig = Undo.AddComponent<ApexHumanoidSupportRig>(humanoid.gameObject);
+                    supportRig.Configure(humanoid);
+                    EditorUtility.SetDirty(humanoid);
+                    EditorUtility.SetDirty(supportRig);
+                }
+
+                return;
+            }
+
+            Rigidbody supportBody = supportRig.SupportBody;
+            EditorGUILayout.ObjectField("Support Body", supportBody, typeof(Rigidbody), true);
+            EditorGUILayout.Toggle("Currently Supported", supportRig.IsSupported);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Rebuild Support"))
+                {
+                    Undo.RecordObject(supportRig, "Rebuild Apex Humanoid Support Rig");
+                    supportRig.RebuildSupport();
+                    EditorUtility.SetDirty(supportRig);
+                }
+
+                if (GUILayout.Button("Snap to Humanoid"))
+                {
+                    supportRig.SnapSupportToHumanoid();
+                }
+            }
         }
 
         private static void DrawRagdollControls(ApexPhysicalHumanoid humanoid)
@@ -143,6 +195,13 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Physical NPC", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Mode", brain.CurrentMode.ToString());
+
+            if (humanoid.SupportRig != null && humanoid.SupportRig.SupportBody != null)
+            {
+                EditorGUILayout.Vector3Field(
+                    "Support Velocity",
+                    humanoid.SupportRig.SupportBody.velocity);
+            }
 
             using (new EditorGUILayout.HorizontalScope())
             {
