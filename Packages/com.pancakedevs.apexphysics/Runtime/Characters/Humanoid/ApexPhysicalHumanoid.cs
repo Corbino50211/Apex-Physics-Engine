@@ -3,6 +3,18 @@ using UnityEngine;
 namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
+    /// Selects how an automatically converted humanoid is configured.
+    /// Kept beside ApexPhysicalHumanoid so Unity cannot partially import the component
+    /// while omitting its required mode type from a Git package refresh.
+    /// </summary>
+    public enum ApexPhysicalHumanoidMode
+    {
+        ActiveRagdoll = 0,
+        PhysicalNPC = 1,
+        PhysicalPlayer = 2
+    }
+
+    /// <summary>
     /// Stores the generated pieces of an Apex physical humanoid conversion.
     /// The animated target drives a visible physical clone through ApexActiveRagdoll.
     /// </summary>
