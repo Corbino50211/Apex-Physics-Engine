@@ -147,13 +147,13 @@ namespace PancakeDevs.ApexPhysics.Editor
                 builder.Append(renderer.enabled).Append('|')
                     .Append(flags).Append('|')
                     .Append(renderer.shadowCastingMode).Append('|')
-                    .Append(renderer.receiveShadows).Append('|')
-                    .Append(renderer.scaleInLightmap).Append('|');
+                    .Append(renderer.receiveShadows).Append('|');
 
-                MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
-                if (meshFilter != null)
+                if (renderer is MeshRenderer meshRenderer)
                 {
-                    AppendAsset(builder, meshFilter.sharedMesh);
+                    builder.Append(meshRenderer.scaleInLightmap).Append('|');
+                    MeshFilter meshFilter = meshRenderer.GetComponent<MeshFilter>();
+                    AppendAsset(builder, meshFilter != null ? meshFilter.sharedMesh : null);
                 }
                 else if (renderer is SkinnedMeshRenderer skinnedRenderer)
                 {
@@ -192,7 +192,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                 AppendTransform(builder, terrain.transform);
                 builder.Append(terrain.enabled).Append('|')
                     .Append(flags).Append('|')
-                    .Append(terrain.scaleInLightmap).Append('|');
+                    .Append(terrain.lightmapScaleOffset).Append('|');
                 AppendAsset(builder, terrain.terrainData);
                 AppendAsset(builder, terrain.materialTemplate);
             }
