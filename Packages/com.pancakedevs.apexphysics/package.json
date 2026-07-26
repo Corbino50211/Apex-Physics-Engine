@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity VR physics framework for pose-calibrated supported physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
+  "description": "A modular Unity VR physics framework for root-constrained supported physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -17,6 +17,7 @@
     "humanoid-converter",
     "support-rig",
     "pose-calibration",
+    "root-constraint",
     "interaction",
     "ragdoll",
     "active-ragdoll",
