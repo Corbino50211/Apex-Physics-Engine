@@ -37,6 +37,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexRagdollCollisionFilter collisionFilter;
         [SerializeField] private ApexHumanoidSupportRig supportRig;
         [SerializeField] private ApexHumanoidLocoballRig locoballRig;
+        [SerializeField] private ApexHumanoidTorsoHarness torsoHarness;
         [SerializeField] private ApexHumanoidPlayerMotor humanoidPlayerMotor;
         [SerializeField] private ApexPhysicalPlayerRig legacyPlayerRig;
         [SerializeField] private ApexNPCNavigator npcNavigator;
@@ -55,6 +56,7 @@ namespace PancakeDevs.ApexPhysics
         public ApexRagdollCollisionFilter CollisionFilter => collisionFilter;
         public ApexHumanoidSupportRig SupportRig => supportRig;
         public ApexHumanoidLocoballRig LocoballRig => locoballRig;
+        public ApexHumanoidTorsoHarness TorsoHarness => torsoHarness;
         public ApexHumanoidPlayerMotor HumanoidPlayerMotor => humanoidPlayerMotor;
         public ApexPhysicalPlayerRig LegacyPlayerRig => legacyPlayerRig;
         public ApexNPCNavigator NPCNavigator => npcNavigator;
@@ -67,6 +69,7 @@ namespace PancakeDevs.ApexPhysics
             {
                 EnsureSupportRig();
                 EnsureLocoballRig();
+                EnsureTorsoHarness();
             }
         }
 
@@ -106,6 +109,7 @@ namespace PancakeDevs.ApexPhysics
             {
                 EnsureSupportRig();
                 EnsureLocoballRig();
+                EnsureTorsoHarness();
             }
         }
 
@@ -154,6 +158,32 @@ namespace PancakeDevs.ApexPhysics
 
             locoballRig.Configure(this);
             return locoballRig;
+        }
+
+        public ApexHumanoidTorsoHarness EnsureTorsoHarness()
+        {
+            if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                return torsoHarness;
+            }
+
+            if (supportRig == null)
+            {
+                EnsureSupportRig();
+            }
+
+            if (torsoHarness == null)
+            {
+                torsoHarness = GetComponent<ApexHumanoidTorsoHarness>();
+            }
+
+            if (torsoHarness == null)
+            {
+                torsoHarness = gameObject.AddComponent<ApexHumanoidTorsoHarness>();
+            }
+
+            torsoHarness.Configure(this);
+            return torsoHarness;
         }
     }
 }
