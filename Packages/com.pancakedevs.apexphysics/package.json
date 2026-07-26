@@ -17,6 +17,7 @@
     "humanoid-converter",
     "support-rig",
     "locoball",
+    "locomotion",
     "foot-tether",
     "pose-calibration",
     "root-constraint",
