@@ -3,8 +3,8 @@ using UnityEngine;
 namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
-    /// Keeps the hidden animated target skeleton aligned with the physical hips.
-    /// Animation continues to pose the target limbs while the physical root owns locomotion.
+    /// Keeps the hidden animated target skeleton aligned with a physical root while
+    /// preserving the Humanoid hips bone's authored position and rotation offsets.
     /// </summary>
     [DefaultExecutionOrder(900)]
     [DisallowMultipleComponent]
@@ -15,19 +15,66 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private bool followPosition = true;
         [SerializeField] private bool followRotation = true;
 
+        [Header("Preserved Target Offset")]
+        [SerializeField] private bool offsetCaptured;
+        [SerializeField] private Vector3 targetLocalPositionOffset;
+        [SerializeField] private Quaternion targetLocalRotationOffset = Quaternion.identity;
+
         public Transform PhysicalRoot => physicalRoot;
         public Transform TargetRoot => targetRoot;
+        public bool OffsetCaptured => offsetCaptured;
+        public Vector3 TargetLocalPositionOffset => targetLocalPositionOffset;
+        public Quaternion TargetLocalRotationOffset => targetLocalRotationOffset;
 
         public void Configure(
             Transform newPhysicalRoot,
             Transform newTargetRoot,
             bool shouldFollowPosition = true,
-            bool shouldFollowRotation = true)
+            bool shouldFollowRotation = true,
+            bool preserveCurrentOffset = true)
         {
             physicalRoot = newPhysicalRoot;
             targetRoot = newTargetRoot;
             followPosition = shouldFollowPosition;
             followRotation = shouldFollowRotation;
+
+            if (preserveCurrentOffset)
+            {
+                CaptureCurrentOffset();
+            }
+            else
+            {
+                targetLocalPositionOffset = Vector3.zero;
+                targetLocalRotationOffset = Quaternion.identity;
+                offsetCaptured = true;
+            }
+
+            SnapNow();
+        }
+
+        /// <summary>
+        /// Captures the target root's current pose relative to the physical root.
+        /// Humanoid hips commonly have a non-identity authored rotation, so this
+        /// offset must be retained instead of forcing both transforms to match.
+        /// </summary>
+        public void CaptureCurrentOffset()
+        {
+            if (physicalRoot == null || targetRoot == null)
+            {
+                offsetCaptured = false;
+                return;
+            }
+
+            targetLocalPositionOffset = physicalRoot.InverseTransformPoint(targetRoot.position);
+            targetLocalRotationOffset = Quaternion.Inverse(physicalRoot.rotation) * targetRoot.rotation;
+            offsetCaptured = true;
+        }
+
+        public void ResetToZeroOffset()
+        {
+            targetLocalPositionOffset = Vector3.zero;
+            targetLocalRotationOffset = Quaternion.identity;
+            offsetCaptured = true;
             SnapNow();
         }
 
@@ -38,14 +85,19 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
+            if (!offsetCaptured)
+            {
+                CaptureCurrentOffset();
+            }
+
             if (followPosition)
             {
-                targetRoot.position = physicalRoot.position;
+                targetRoot.position = physicalRoot.TransformPoint(targetLocalPositionOffset);
             }
 
             if (followRotation)
             {
-                targetRoot.rotation = physicalRoot.rotation;
+                targetRoot.rotation = physicalRoot.rotation * targetLocalRotationOffset;
             }
         }
 
