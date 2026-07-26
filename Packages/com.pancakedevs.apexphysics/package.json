@@ -1,9 +1,12 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity physics framework for physical players, NPCs, grabbable objects, mechanisms, damage, and reusable physics-driven gameplay.",
-  "unity": "2022.3",
+  "description": "A modular Unity physics framework for physical players, NPCs, grabbable objects, mechanisms, damage, navigation, and reusable physics-driven gameplay.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.ai.navigation": "2.0.9"
+  },
   "author": {
     "name": "PancakeDevs"
   },
@@ -12,7 +15,9 @@
     "vr",
     "interaction",
     "ragdoll",
-    "grabbing"
+    "grabbing",
+    "navigation",
+    "npc"
   ],
   "samples": [
     {
