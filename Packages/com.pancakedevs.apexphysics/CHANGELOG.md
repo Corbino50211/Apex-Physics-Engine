@@ -2,6 +2,35 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.1.0] - 2026-07-26
+
+### Added
+
+- Automatic conversion of imported Humanoid Avatar characters into Apex physical humanoids.
+- Physical NPC, physical player, and active-ragdoll-only conversion modes.
+- A visible physical character paired with a hidden animated target duplicate.
+- Automatic Humanoid bone mapping for hips, torso, head, arms, hands, legs, feet, shoulders, neck, and optional toes.
+- Starter Rigidbody masses, colliders, ConfigurableJoints, joint limits, connected bodies, muscle mappings, and adjacent-bone collision filtering.
+- `ApexPhysicalHumanoid` generated-rig descriptor and runtime diagnostics.
+- `ApexHumanoidTargetRootDriver` for keeping the hidden target hips aligned with the physical hips.
+- `ApexHumanoidTrackingDriver` with generated VR head and hand targets.
+- `ApexHumanoidPlayerMotor` for input-agnostic full-body movement, balance, turning, jumping, knockdown control loss, and recovery blending without a second capsule body.
+- Automatic physical NPC setup using the existing NavMesh navigator, Rigidbody motor, and Idle/Wander/Chase brain.
+- Optional saving of converted humanoids as prefabs and automatic Warehouse crate creation.
+- A dedicated converter window, direct conversion menu commands, validation messages, and Play Mode test controls.
+
+### Changed
+
+- `ApexActiveRagdoll` now exposes converter-friendly configuration for target Animators, root bones, and root-following rules.
+- `ApexRagdollBone` now exposes per-bone muscle multiplier configuration.
+
+### Notes
+
+- Generated collider sizes and joint limits are safe starter values, not final tuning for every body shape or bone orientation.
+- The physical-player conversion creates SDK-independent tracking targets. An OpenXR/XR Interaction Toolkit adapter still needs to assign real headset and controller poses.
+- Direct hand-bone targeting is the first VR target layer; elbow prediction, arm IK, climbing, and hand interaction integration remain later milestones.
+- Unity compilation and Play Mode behavior still require validation inside the Unity 6.2 test project before the draft release is merged.
+
 ## [0.0.9] - 2026-07-26
 
 ### Added
