@@ -88,17 +88,19 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorGUILayout.ObjectField("Hips Anchor", supportRig.HipsAnchor, typeof(Transform), true);
             EditorGUILayout.Toggle("Currently Supported", supportRig.IsSupported);
 
-            if (GUILayout.Button("Rebuild and Stand Up", GUILayout.Height(30f)))
+            if (Application.isPlaying)
             {
-                Undo.RecordObject(supportRig, "Rebuild and Stand Up Apex Humanoid");
-                supportRig.RebuildSupport();
-                supportRig.SnapSupportToHumanoid();
-                if (Application.isPlaying)
-                {
-                    humanoid.ActiveRagdoll?.RecoverImmediately();
-                }
+                EditorGUILayout.HelpBox(
+                    "Exit Play Mode before recalibrating the standing pose. Calibration uses the character's original upright bind pose.",
+                    MessageType.Info);
+            }
 
-                EditorUtility.SetDirty(supportRig);
+            using (new EditorGUI.DisabledScope(Application.isPlaying))
+            {
+                if (GUILayout.Button("Rebuild and Calibrate Standing Pose", GUILayout.Height(34f)))
+                {
+                    RebuildAndCalibrateStandingPose(humanoid, supportRig);
+                }
             }
 
             using (new EditorGUILayout.HorizontalScope())
@@ -115,6 +117,75 @@ namespace PancakeDevs.ApexPhysics.Editor
                     supportRig.SnapSupportToHumanoid();
                 }
             }
+        }
+
+        private static void RebuildAndCalibrateStandingPose(
+            ApexPhysicalHumanoid humanoid,
+            ApexHumanoidSupportRig supportRig)
+        {
+            if (humanoid == null || supportRig == null || humanoid.PhysicalHips == null ||
+                humanoid.TargetHips == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Apex Standing Pose",
+                    "The physical hips, target hips, or support rig reference is missing.",
+                    "OK");
+                return;
+            }
+
+            Transform physicalHips = humanoid.PhysicalHips.transform;
+            Transform targetHips = humanoid.TargetHips;
+            ApexHumanoidTargetRootDriver targetDriver = humanoid.TargetRootDriver;
+            ApexActiveRagdoll ragdoll = humanoid.ActiveRagdoll;
+
+            Object[] undoTargets =
+            {
+                humanoid,
+                supportRig,
+                physicalHips,
+                targetHips,
+                targetDriver,
+                ragdoll
+            };
+            Undo.RecordObjects(undoTargets, "Calibrate Apex Humanoid Standing Pose");
+
+            // Restore the hidden target hips to the known-good physical bind pose before
+            // capturing its offset from the simplified support body.
+            targetHips.SetPositionAndRotation(physicalHips.position, physicalHips.rotation);
+
+            supportRig.RebuildSupport();
+            supportRig.SnapSupportToHumanoid();
+
+            if (targetDriver != null && supportRig.HipsAnchor != null)
+            {
+                targetHips.SetPositionAndRotation(physicalHips.position, physicalHips.rotation);
+                targetDriver.Configure(
+                    supportRig.HipsAnchor,
+                    targetHips,
+                    true,
+                    true,
+                    true);
+            }
+
+            if (ragdoll != null)
+            {
+                ragdoll.RefreshBones();
+                ragdoll.CaptureCurrentPose();
+            }
+
+            EditorUtility.SetDirty(humanoid);
+            EditorUtility.SetDirty(supportRig);
+            if (targetDriver != null)
+            {
+                EditorUtility.SetDirty(targetDriver);
+            }
+
+            if (ragdoll != null)
+            {
+                EditorUtility.SetDirty(ragdoll);
+            }
+
+            SceneView.RepaintAll();
         }
 
         private static void DrawRagdollControls(ApexPhysicalHumanoid humanoid)
