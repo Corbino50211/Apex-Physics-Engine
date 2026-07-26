@@ -76,6 +76,11 @@ namespace PancakeDevs.ApexPhysics.Editor
                 Undo.AddComponent<ApexNPCMotor>(selected);
             }
 
+            if (selected.GetComponent<ApexNPCBrain>() == null)
+            {
+                Undo.AddComponent<ApexNPCBrain>(selected);
+            }
+
             Undo.RecordObject(rigidbody, "Configure Apex NPC Rigidbody");
             rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
             rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
