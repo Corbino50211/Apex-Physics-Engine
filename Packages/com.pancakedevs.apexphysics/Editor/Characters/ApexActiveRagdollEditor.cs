@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using PancakeDevs.ApexPhysics;
 using UnityEditor;
 using UnityEngine;
@@ -56,6 +57,14 @@ namespace PancakeDevs.ApexPhysics.Editor
                 }
             }
 
+            using (new EditorGUI.DisabledScope(ragdoll.TargetAnimator == null || ragdoll.Bones.Count == 0))
+            {
+                if (GUILayout.Button("Map Targets by Bone Name"))
+                {
+                    MapTargetsByName(ragdoll);
+                }
+            }
+
             if (!Application.isPlaying)
             {
                 return;
@@ -86,6 +95,38 @@ namespace PancakeDevs.ApexPhysics.Editor
             }
 
             Repaint();
+        }
+
+        private static void MapTargetsByName(ApexActiveRagdoll ragdoll)
+        {
+            Transform[] targetTransforms = ragdoll.TargetAnimator.GetComponentsInChildren<Transform>(true);
+            Dictionary<string, Transform> targetsByName = new Dictionary<string, Transform>();
+            for (int i = 0; i < targetTransforms.Length; i++)
+            {
+                Transform targetTransform = targetTransforms[i];
+                if (targetTransform != null && !targetsByName.ContainsKey(targetTransform.name))
+                {
+                    targetsByName.Add(targetTransform.name, targetTransform);
+                }
+            }
+
+            int mappedCount = 0;
+            for (int i = 0; i < ragdoll.Bones.Count; i++)
+            {
+                ApexRagdollBone bone = ragdoll.Bones[i];
+                if (bone == null || !targetsByName.TryGetValue(bone.name, out Transform targetTransform))
+                {
+                    continue;
+                }
+
+                Undo.RecordObject(bone, "Map Apex Ragdoll Target");
+                bone.SetTarget(targetTransform);
+                EditorUtility.SetDirty(bone);
+                mappedCount++;
+            }
+
+            ragdoll.CaptureCurrentPose();
+            Debug.Log($"Apex mapped {mappedCount} ragdoll bone target(s) by name.", ragdoll);
         }
     }
 }
