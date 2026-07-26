@@ -36,8 +36,13 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexHumanoidTrackingDriver trackingDriver;
         [SerializeField] private ApexRagdollCollisionFilter collisionFilter;
         [SerializeField] private ApexHumanoidSupportRig supportRig;
+        [SerializeField] private ApexHumanoidPhysicalController physicalController;
+
+        [Header("Legacy Support Add-ons")]
         [SerializeField] private ApexHumanoidLocoballRig locoballRig;
         [SerializeField] private ApexHumanoidTorsoHarness torsoHarness;
+
+        [Header("Player and NPC Systems")]
         [SerializeField] private ApexHumanoidPlayerMotor humanoidPlayerMotor;
         [SerializeField] private ApexPhysicalPlayerRig legacyPlayerRig;
         [SerializeField] private ApexNPCNavigator npcNavigator;
@@ -55,6 +60,7 @@ namespace PancakeDevs.ApexPhysics
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
         public ApexRagdollCollisionFilter CollisionFilter => collisionFilter;
         public ApexHumanoidSupportRig SupportRig => supportRig;
+        public ApexHumanoidPhysicalController PhysicalController => physicalController;
         public ApexHumanoidLocoballRig LocoballRig => locoballRig;
         public ApexHumanoidTorsoHarness TorsoHarness => torsoHarness;
         public ApexHumanoidPlayerMotor HumanoidPlayerMotor => humanoidPlayerMotor;
@@ -68,8 +74,7 @@ namespace PancakeDevs.ApexPhysics
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
                 EnsureSupportRig();
-                EnsureLocoballRig();
-                EnsureTorsoHarness();
+                EnsurePhysicalController();
             }
         }
 
@@ -108,8 +113,7 @@ namespace PancakeDevs.ApexPhysics
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
                 EnsureSupportRig();
-                EnsureLocoballRig();
-                EnsureTorsoHarness();
+                EnsurePhysicalController();
             }
         }
 
@@ -134,11 +138,11 @@ namespace PancakeDevs.ApexPhysics
             return supportRig;
         }
 
-        public ApexHumanoidLocoballRig EnsureLocoballRig()
+        public ApexHumanoidPhysicalController EnsurePhysicalController()
         {
             if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
             {
-                return locoballRig;
+                return physicalController;
             }
 
             if (supportRig == null)
@@ -146,44 +150,68 @@ namespace PancakeDevs.ApexPhysics
                 EnsureSupportRig();
             }
 
+            if (physicalController == null)
+            {
+                physicalController = GetComponent<ApexHumanoidPhysicalController>();
+            }
+
+            if (physicalController == null)
+            {
+                physicalController = gameObject.AddComponent<ApexHumanoidPhysicalController>();
+            }
+
+            DisableLegacySupportAddons();
+            physicalController.Configure(this);
+            return physicalController;
+        }
+
+        /// <summary>
+        /// Retained only so older serialized prefabs can still deserialize. New physical
+        /// NPCs do not install or use the locoball foot-tether system.
+        /// </summary>
+        public ApexHumanoidLocoballRig EnsureLocoballRig()
+        {
             if (locoballRig == null)
             {
                 locoballRig = GetComponent<ApexHumanoidLocoballRig>();
             }
 
-            if (locoballRig == null)
-            {
-                locoballRig = gameObject.AddComponent<ApexHumanoidLocoballRig>();
-            }
-
-            locoballRig.Configure(this);
             return locoballRig;
         }
 
+        /// <summary>
+        /// Retained only so older serialized prefabs can still deserialize. New physical
+        /// NPCs use target-driven spine muscles instead of a separate chest spring.
+        /// </summary>
         public ApexHumanoidTorsoHarness EnsureTorsoHarness()
         {
-            if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
-            {
-                return torsoHarness;
-            }
-
-            if (supportRig == null)
-            {
-                EnsureSupportRig();
-            }
-
             if (torsoHarness == null)
             {
                 torsoHarness = GetComponent<ApexHumanoidTorsoHarness>();
             }
 
-            if (torsoHarness == null)
+            return torsoHarness;
+        }
+
+        private void DisableLegacySupportAddons()
+        {
+            locoballRig = GetComponent<ApexHumanoidLocoballRig>();
+            if (locoballRig != null)
             {
-                torsoHarness = gameObject.AddComponent<ApexHumanoidTorsoHarness>();
+                locoballRig.enabled = false;
             }
 
-            torsoHarness.Configure(this);
-            return torsoHarness;
+            torsoHarness = GetComponent<ApexHumanoidTorsoHarness>();
+            if (torsoHarness != null)
+            {
+                torsoHarness.enabled = false;
+            }
+
+            ApexHumanoidFootTether[] tethers = GetComponentsInChildren<ApexHumanoidFootTether>(true);
+            for (int i = 0; i < tethers.Length; i++)
+            {
+                tethers[i]?.SetTetherActive(false);
+            }
         }
     }
 }
