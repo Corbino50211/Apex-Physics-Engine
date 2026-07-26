@@ -13,21 +13,25 @@ Apex Physics Engine > Characters > Create Physical Player Rig
 The command creates:
 
 ```text
-Apex Physical Player
-├── Rigidbody
-├── CapsuleCollider
-├── ApexBody
-├── ApexPhysicalPlayerRig
-├── Tracking Targets
-│   ├── Head Target
-│   ├── Left Hand Target
-│   └── Right Hand Target
-├── Physical Head
-├── Physical Left Hand
-└── Physical Right Hand
+Apex Physical Player Rig
+├── Apex Physical Player
+│   ├── Rigidbody
+│   ├── CapsuleCollider
+│   ├── ApexBody
+│   ├── ApexPhysicalPlayerRig
+│   └── Tracking Targets
+│       ├── Head Target
+│       ├── Left Hand Target
+│       └── Right Hand Target
+└── Physical Proxies
+    ├── Physical Head
+    ├── Physical Left Hand
+    └── Physical Right Hand
 ```
 
-It also creates or reuses this project asset:
+The physical proxies are siblings of the dynamic player body rather than Rigidbody children. This prevents the root Rigidbody transform from fighting the tracked proxy Rigidbodies.
+
+The command also creates or reuses this project asset:
 
 ```text
 Assets/Apex Physics Engine/Profiles/Apex Physical Player Profile.asset
