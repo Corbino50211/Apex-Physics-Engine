@@ -42,6 +42,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             Undo.SetCurrentGroupName("Rebuild Apex NPC Physical Controller");
 
             RemoveLegacySupportAddons(humanoid);
+            humanoid.TunePhysicalNpcMuscles();
 
             ApexHumanoidSupportRig supportRig = humanoid.SupportRig != null
                 ? humanoid.SupportRig
