@@ -85,7 +85,21 @@ namespace PancakeDevs.ApexPhysics.Editor
 
             Rigidbody supportBody = supportRig.SupportBody;
             EditorGUILayout.ObjectField("Support Body", supportBody, typeof(Rigidbody), true);
+            EditorGUILayout.ObjectField("Hips Anchor", supportRig.HipsAnchor, typeof(Transform), true);
             EditorGUILayout.Toggle("Currently Supported", supportRig.IsSupported);
+
+            if (GUILayout.Button("Rebuild and Stand Up", GUILayout.Height(30f)))
+            {
+                Undo.RecordObject(supportRig, "Rebuild and Stand Up Apex Humanoid");
+                supportRig.RebuildSupport();
+                supportRig.SnapSupportToHumanoid();
+                if (Application.isPlaying)
+                {
+                    humanoid.ActiveRagdoll?.RecoverImmediately();
+                }
+
+                EditorUtility.SetDirty(supportRig);
+            }
 
             using (new EditorGUILayout.HorizontalScope())
             {
