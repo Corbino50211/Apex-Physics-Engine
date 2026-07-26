@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity physics framework for physical players, active ragdolls, NPCs, grabbable objects, barcode-driven crates, navigation, automatic lighting workflows, and reusable physics-driven gameplay.",
+  "description": "A modular Unity VR physics framework for automatically converted physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -13,6 +13,8 @@
   "keywords": [
     "physics",
     "vr",
+    "humanoid",
+    "humanoid-converter",
     "interaction",
     "ragdoll",
     "active-ragdoll",
