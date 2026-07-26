@@ -2,6 +2,25 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.1.3] - 2026-07-26
+
+### Fixed
+
+- `ApexHumanoidTargetRootDriver` now preserves the Humanoid hips bone's authored position and rotation offsets instead of forcing the target hips to exactly match the simplified support transform.
+- Fixed converted NPCs being pulled into arched, bridge-like, or sideways poses when a model's hips bone uses a non-identity bind rotation.
+- Existing generated NPCs can restore the hidden target hips from the upright physical bind pose before recalibrating the support-relative offset.
+- Standing-pose repair now refreshes the ragdoll bone list and recaptures muscle rest rotations after target-root calibration.
+
+### Changed
+
+- Replaced **Rebuild and Stand Up** with **Rebuild and Calibrate Standing Pose** in the generated humanoid inspector.
+- Standing-pose calibration is intentionally Edit Mode only so a fallen runtime pose cannot accidentally become the new muscle rest pose.
+
+### Notes
+
+- Existing 0.1.2 NPCs do not need to be deleted or reconverted. Update the package, exit Play Mode, select the generated humanoid root, and run the calibration command once.
+- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 test project before the draft release is merged.
+
 ## [0.1.2] - 2026-07-26
 
 ### Fixed
@@ -207,7 +226,6 @@ All notable changes to Apex Physics Engine will be documented here.
 ### Added
 
 - Initial Unity Package Manager manifest.
-- Runtime and editor assembly definitions.
 - `ApexBody` core Rigidbody wrapper.
 - Reusable `ApexPhysicsProfile` assets.
 - Universal `ApexImpactInfo` collision data.
