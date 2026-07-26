@@ -79,7 +79,6 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            tetherJoint.enabled = active;
             if (!active)
             {
                 tetherJoint.spring = 0f;
@@ -175,7 +174,6 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            tetherJoint.enabled = true;
             bool limp = state == ApexRagdollState.Limp;
             tetherJoint.spring = limp ? 0f : spring;
             tetherJoint.damper = limp ? 0f : damper;
