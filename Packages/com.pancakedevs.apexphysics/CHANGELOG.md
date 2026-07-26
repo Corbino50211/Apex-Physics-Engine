@@ -2,6 +2,24 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.0.5] - 2026-07-26
+
+### Added
+
+- `ApexNPCBrain` with selectable Idle, Wander, and Chase behavior modes.
+- Random NavMesh wandering around a remembered home position.
+- Configurable wander radius, wait time, NavMesh sample distance, and sample attempts.
+- Hard-impact retaliation using `ApexBody.Impacted` collision data.
+- Configurable impact speed and impulse thresholds.
+- Timed chase behavior that returns to Wander after 10 seconds by default.
+- Repeated hard impacts refresh the chase timer and update the chase target.
+- Runtime behavior inspector controls and diagnostics.
+- Missing-brain warning and one-click repair button for existing NPCs.
+
+### Changed
+
+- **Make Selected Object a Basic NPC** now also adds `ApexNPCBrain`.
+
 ## [0.0.4] - 2026-07-26
 
 ### Added
