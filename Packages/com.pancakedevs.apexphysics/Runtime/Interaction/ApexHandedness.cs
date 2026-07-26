@@ -4,6 +4,7 @@ namespace PancakeDevs.ApexPhysics
     public enum ApexHandedness
     {
         Any = 0,
+        Either = Any,
         Left = 1,
         Right = 2
     }
