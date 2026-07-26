@@ -13,6 +13,11 @@ All notable changes to Apex Physics Engine will be documented here.
 - Physics-friendly NavMeshAgent configuration that does not directly move or rotate the NPC transform.
 - Inspector controls for building, clearing, and marking NavMesh surfaces dirty.
 - One-click editor commands for creating navigation surfaces and NPC navigators.
+- Dedicated **Apex Physics Engine** top-bar menu for bodies, grabbing, navigation, and profile creation.
+
+### Changed
+
+- Moved Apex setup commands out of Unity's GameObject menu and into the dedicated Apex top-bar menu.
 
 ## [0.0.2] - 2026-07-26
 
