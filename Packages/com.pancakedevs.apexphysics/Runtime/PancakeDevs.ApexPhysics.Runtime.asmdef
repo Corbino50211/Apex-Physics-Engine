@@ -1,7 +1,9 @@
 {
   "name": "PancakeDevs.ApexPhysics.Runtime",
   "rootNamespace": "PancakeDevs.ApexPhysics",
-  "references": [],
+  "references": [
+    "Unity.AI.Navigation"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
