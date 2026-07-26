@@ -1,6 +1,6 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "displayName": "Apex Physics Engine",
   "description": "A modular Unity VR physics framework for locoball-supported physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
   "unity": "6000.0",
