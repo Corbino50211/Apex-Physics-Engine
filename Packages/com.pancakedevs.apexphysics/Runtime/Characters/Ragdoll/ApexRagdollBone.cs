@@ -78,6 +78,11 @@ namespace PancakeDevs.ApexPhysics
             CapturePose();
         }
 
+        public void SetMuscleMultiplier(float multiplier)
+        {
+            muscleMultiplier = Mathf.Clamp(multiplier, 0f, 2f);
+        }
+
         public void CapturePose()
         {
             startingLocalRotation = transform.localRotation;
