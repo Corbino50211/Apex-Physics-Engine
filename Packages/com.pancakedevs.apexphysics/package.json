@@ -1,0 +1,24 @@
+{
+  "name": "com.pancakedevs.apexphysics",
+  "version": "0.0.1",
+  "displayName": "Apex Physics Engine",
+  "description": "A modular Unity physics framework for physical players, NPCs, grabbable objects, mechanisms, damage, and reusable physics-driven gameplay.",
+  "unity": "2022.3",
+  "author": {
+    "name": "PancakeDevs"
+  },
+  "keywords": [
+    "physics",
+    "vr",
+    "interaction",
+    "ragdoll",
+    "grabbing"
+  ],
+  "samples": [
+    {
+      "displayName": "Physics Lab",
+      "description": "Starter content for testing Apex physics components.",
+      "path": "Samples~/PhysicsLab"
+    }
+  ]
+}
