@@ -2,6 +2,31 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.1.1] - 2026-07-26
+
+### Added
+
+- `ApexHumanoidSupportRig`, a hidden Marrow-inspired central physics body for converted physical NPCs.
+- A composite support shape using a torso box, lower-body capsule, and ground-contact sphere.
+- Automatic support-body installation for newly converted and existing `ApexPhysicalHumanoid` NPCs.
+- A driven hips connection that keeps the visible articulated skeleton attached to the stable support body.
+- Support-body NavMesh movement while preserving the existing NPC navigator, brain, targets, and behavior settings.
+- Knockdown integration that releases upright constraints while Limp and restores the supported core during recovery.
+- Internal collision filtering between the support body and visible physical skeleton.
+- Inspector controls to install, rebuild, inspect, and snap the supported physics core.
+
+### Changed
+
+- Converted physical NPCs no longer rely on the hips-only `ApexNPCMotor` to carry the entire articulated body.
+- The legacy hips motor remains installed for compatibility but is disabled while the support rig drives locomotion.
+- The hidden animated target root now follows the support body instead of unstable physical hips.
+
+### Notes
+
+- Version 0.1.1 is an original supported-ragdoll architecture inspired by the general simplified-body approach shown in physics-character rigs; it is not an implementation of proprietary Marrow code.
+- Support-body proportions are generated from humanoid height and remain editable per character.
+- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 test project before the draft release is merged.
+
 ## [0.1.0] - 2026-07-26
 
 ### Added
