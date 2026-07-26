@@ -2,6 +2,27 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.1.2] - 2026-07-26
+
+### Fixed
+
+- Supported humanoids no longer place the central support collider directly at the hips, which previously pushed the lower capsule deeply through the floor on normal body proportions.
+- Support-body placement now detects external ground or the generated foot-sole height and aligns the lowest support collider above that plane with a small clearance.
+- Added a persistent hips anchor so floor-aligning the support body does not move the hidden animated target away from the physical hips.
+- Hips joint anchors are now configured explicitly instead of relying on automatic connected-anchor recalculation.
+- Converted physical NPCs disable ragdoll self-collision by default to prevent overlapping automatically generated torso, shoulder, and leg colliders from launching the character at startup.
+- Recovery and manual snapping now restore the saved standing hips offset instead of centering the support body on a fallen hips position.
+
+### Added
+
+- **Rebuild and Stand Up** inspector repair command for converted physical NPCs.
+- Live hips-anchor reference in the supported physics core inspector.
+
+### Notes
+
+- Existing 0.1.1 NPCs can be repaired in place; deleting and reconverting the character is not required.
+- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 test project before the draft release is merged.
+
 ## [0.1.1] - 2026-07-26
 
 ### Added
