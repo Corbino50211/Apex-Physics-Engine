@@ -28,6 +28,12 @@ namespace PancakeDevs.ApexPhysics
             Apply();
         }
 
+        public void SetIgnoreAllSelfCollisions(bool shouldIgnore)
+        {
+            ignoreAllSelfCollisions = shouldIgnore;
+            Apply();
+        }
+
         public void RefreshFromChildren()
         {
             ragdollColliders = GetComponentsInChildren<Collider>(true);
