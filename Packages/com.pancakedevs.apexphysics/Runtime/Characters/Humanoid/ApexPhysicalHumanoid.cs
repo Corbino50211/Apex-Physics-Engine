@@ -24,6 +24,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexHumanoidTrackingDriver trackingDriver;
         [SerializeField] private ApexRagdollCollisionFilter collisionFilter;
         [SerializeField] private ApexHumanoidSupportRig supportRig;
+        [SerializeField] private ApexHumanoidLocoballRig locoballRig;
         [SerializeField] private ApexHumanoidPlayerMotor humanoidPlayerMotor;
         [SerializeField] private ApexPhysicalPlayerRig legacyPlayerRig;
         [SerializeField] private ApexNPCNavigator npcNavigator;
@@ -41,6 +42,7 @@ namespace PancakeDevs.ApexPhysics
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
         public ApexRagdollCollisionFilter CollisionFilter => collisionFilter;
         public ApexHumanoidSupportRig SupportRig => supportRig;
+        public ApexHumanoidLocoballRig LocoballRig => locoballRig;
         public ApexHumanoidPlayerMotor HumanoidPlayerMotor => humanoidPlayerMotor;
         public ApexPhysicalPlayerRig LegacyPlayerRig => legacyPlayerRig;
         public ApexNPCNavigator NPCNavigator => npcNavigator;
@@ -52,6 +54,7 @@ namespace PancakeDevs.ApexPhysics
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
                 EnsureSupportRig();
+                EnsureLocoballRig();
             }
         }
 
@@ -90,6 +93,7 @@ namespace PancakeDevs.ApexPhysics
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
                 EnsureSupportRig();
+                EnsureLocoballRig();
             }
         }
 
@@ -112,6 +116,32 @@ namespace PancakeDevs.ApexPhysics
 
             supportRig.Configure(this);
             return supportRig;
+        }
+
+        public ApexHumanoidLocoballRig EnsureLocoballRig()
+        {
+            if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                return locoballRig;
+            }
+
+            if (supportRig == null)
+            {
+                EnsureSupportRig();
+            }
+
+            if (locoballRig == null)
+            {
+                locoballRig = GetComponent<ApexHumanoidLocoballRig>();
+            }
+
+            if (locoballRig == null)
+            {
+                locoballRig = gameObject.AddComponent<ApexHumanoidLocoballRig>();
+            }
+
+            locoballRig.Configure(this);
+            return locoballRig;
         }
     }
 }
