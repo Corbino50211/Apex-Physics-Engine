@@ -1,104 +1,102 @@
 # Supported Physical Humanoids
 
-Apex Physics Engine 0.1.4 uses a stable central support body for converted physical NPCs.
+Apex Physics Engine uses a simplified central support body plus an articulated visible skeleton for converted physical NPCs.
 
-## Why the old NPC collapsed
+## Why a pure ragdoll collapses
 
-The first humanoid converter made every bone dynamic and asked the physical hips to move, balance, and carry the complete articulated body. That creates a genuine ragdoll, but it does not provide enough stable structure for ordinary standing and walking.
+A fully dynamic humanoid cannot reliably stand and navigate from joint muscles alone. Apex therefore separates stable locomotion from visible articulated reaction physics.
 
 ## Supported-rig structure
-
-Apex creates this hidden physics structure:
 
 ```text
 Apex Physical Humanoid
 ├── Apex Humanoid Support Body
-│   ├── Rigidbody
-│   ├── ApexBody
+│   ├── Rigidbody at the physical hips
 │   ├── torso BoxCollider
 │   ├── lower-body CapsuleCollider
-│   ├── ground-contact SphereCollider
-│   └── Hips Anchor
+│   └── Apex Humanoid Locoball
+│       ├── floor-contact SphereCollider
+│       ├── Left Foot Anchor
+│       └── Right Foot Anchor
 ├── Visible Physical Character
-│   └── articulated physical skeleton
+│   ├── articulated active-ragdoll skeleton
+│   ├── left-foot spring tether
+│   └── right-foot spring tether
 └── Hidden Animated Target
 ```
 
-The support body is deliberately simple and stable. The visible torso and limbs remain articulated and follow the hidden animated target through active-ragdoll muscles.
+The support body owns root locomotion and upright stability. The visible spine, arms, hands, legs, feet, neck, and head remain physics-driven.
 
 This is an original Apex implementation inspired by the general simplified-body approach visible in physics-character rigs. It does not use proprietary Marrow source code.
 
-## Supported root constraint
+## Locoball and support placement
 
-The hips are different from ordinary ragdoll limbs. Their ConfigurableJoint connects to the separate support Rigidbody rather than to the hips bone's normal transform parent.
+The support Rigidbody origin is rebuilt at the physical hips instead of being left near scene Y = 0. Its torso and lower-body colliders are regenerated from the actual hips, chest, sole, and detected floor positions.
 
-Apex therefore does not run the normal local-space muscle equation on support-connected hips. The support body owns root position and rotation through a rigid hips constraint. The spine, arms, hands, legs, feet, neck, and head continue using physical muscle drives.
+The old embedded ground sphere is disabled and replaced by a child locoball with its own transform at floor height. This makes the floor contact easy to inspect and tune.
 
-This prevents an invalid hips target rotation from folding the complete body around the support core.
+## Foot tethers
 
-## Active movement
+Each physical foot receives an `ApexHumanoidFootTether` connected to a left or right anchor on the locoball.
 
-While the active ragdoll is Active:
+While Active or Recovering:
 
-- The support body remains upright.
-- The NavMesh navigator continues planning paths.
-- `ApexHumanoidSupportRig` moves and turns the support body.
-- The physical hips remain rigidly attached to the support body.
-- The torso and limbs remain physical and can collide with the environment.
-- The old hips-based `ApexNPCMotor` is disabled so the two motors do not fight.
+- The tethers keep the feet within a limited distance of the locoball.
+- Knees and ankles remain articulated through their normal ragdoll joints.
+- The legs cannot stretch or fly far away from the locomotion core.
 
-## Knockdown and recovery
+While Limp:
 
-When a sufficiently hard impact changes the ragdoll to Limp:
+- Tether springs and damping are removed.
+- Maximum tether distance expands so the body can fall naturally.
+- Recovery rebuilds the locoball and brings the feet back into a controllable range.
 
-- NPC support movement stops.
-- Upright constraints on the support Rigidbody are released.
-- The support core and articulated body can fall together.
-- Active-ragdoll limb muscles are disabled by the ragdoll state system.
+## Knockdown filtering
 
-When recovery starts:
+Converted humanoids ignore startup and internal settling impacts. By default, a knockdown requires an external, non-kinematic Rigidbody collision.
 
-- The support body is reset to an upright orientation.
-- Upright constraints return.
-- Limb strength blends back with active-ragdoll recovery progress.
-- Normal NPC navigation resumes when the character becomes Active.
+This prevents the following from immediately forcing Limp:
 
-## Upgrade or repair an existing NPC
+- Moving or rebuilding the support body
+- Touching the static floor
+- Colliding with the NPC's own support body or locoball
+- Generated parts settling during the first second of Play Mode
 
-1. Update Apex Physics Engine to 0.1.4.
+Thrown dynamic bodies can still trigger real knockdowns.
+
+## Upgrade an existing NPC
+
+1. Update Apex Physics Engine.
 2. Exit Play Mode.
-3. Select the generated `Apex Physical Humanoid` wrapper.
-4. Find **Supported Physics Core** in the inspector.
-5. Click **Rebuild and Calibrate Standing Pose**.
-6. Save the scene.
+3. Select the generated physical NPC or any child under it.
+4. Run **Apex Physics Engine > Characters > Rebuild Selected NPC Locoball**.
+5. Save the scene.
+6. Build the NavMesh if needed.
 7. Enter Play Mode.
 
-Calibration is intentionally unavailable during Play Mode so a fallen or deformed runtime pose cannot become the saved rest pose.
+Deleting and reconverting the humanoid is not required.
 
 ## New conversions
 
-New **Physical NPC** conversions install the support body automatically. Active-ragdoll-only conversions are unchanged. Physical-player support remains a separate tuning path because VR players require headset height, climbing, and body-calibration behavior that differs from autonomous NPCs.
+New **Physical NPC** conversions install the support body, locoball, anchors, and foot tethers automatically.
 
 ## Tuning
 
-Select the wrapper and expand `ApexHumanoidSupportRig` to tune:
+Select the generated wrapper and tune `ApexHumanoidLocoballRig`:
 
-- Movement speed
-- Acceleration and braking
-- Maximum movement force
-- Turning responsiveness
-- Maximum turning torque
-- Support body height and radius
-- Torso width, depth, and height
-- Support mass
+- Locoball radius
+- Floor clearance
+- Left/right foot spread
+- Tether spring and damping
+- Maximum active tether distance
+- Limp slack distance
+- Impact arming delay
 
-The generated proportions use the Humanoid Avatar's head and feet when available, with renderer bounds as a fallback.
+Select each generated `ApexHumanoidFootTether` for per-foot inspection.
 
 ## Current limitations
 
-- The support body is hidden but still provides the main environmental collision volume.
-- Feet and limbs remain physical, but the support body—not footstep simulation—currently owns locomotion.
-- Dedicated stepping, slope adaptation, procedural foot placement, and obstacle climbing are future systems.
-- Recovery currently resets the support core upright before muscles blend back; dedicated front/back get-up animation selection remains future work.
-- Automatic limb joint axes and angular limits are starter values and may still need model-specific tuning.
+- The support body and locoball still own locomotion; procedural stepping is not implemented yet.
+- Feet are softly constrained rather than planted with full inverse-kinematics foot placement.
+- Dedicated slope adaptation, stairs, obstacle climbing, and front/back get-up animation selection remain future work.
 - Unity compilation and Play Mode tuning must be confirmed in the target Unity 6.2 project.
