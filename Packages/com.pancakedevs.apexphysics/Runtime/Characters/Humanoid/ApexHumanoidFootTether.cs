@@ -3,9 +3,9 @@ using UnityEngine;
 namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
-    /// Adds a soft secondary constraint between a physical humanoid foot and an
-    /// anchor on the simplified locoball. The normal ankle joint still controls
-    /// articulation; this tether only prevents the leg from stretching or flying away.
+    /// Legacy soft constraint between a physical humanoid foot and a locoball anchor.
+    /// The unified physical humanoid controller disables this component because active
+    /// locomotion is now driven by the animated target skeleton instead.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
@@ -26,9 +26,11 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField, Min(0f)] private float limpMaximumDistance = 2f;
 
         private bool subscribed;
+        private bool tetherActive = true;
 
         public SpringJoint Joint => tetherJoint;
         public Transform LocoballAnchor => locoballAnchor;
+        public bool TetherActive => tetherActive;
 
         private void OnEnable()
         {
@@ -39,6 +41,7 @@ namespace PancakeDevs.ApexPhysics
         private void OnDisable()
         {
             Unsubscribe();
+            SetTetherActive(false);
         }
 
         public void Configure(
@@ -59,11 +62,36 @@ namespace PancakeDevs.ApexPhysics
             damper = Mathf.Max(0f, newDamper);
             maximumDistance = Mathf.Max(0f, newMaximumDistance);
             limpMaximumDistance = Mathf.Max(maximumDistance, newLimpMaximumDistance);
+            tetherActive = true;
 
             EnsureJoint();
             RefreshAnchor();
             Subscribe();
             ApplyCurrentState();
+        }
+
+        public void SetTetherActive(bool active)
+        {
+            tetherActive = active;
+            EnsureJoint();
+            if (tetherJoint == null)
+            {
+                return;
+            }
+
+            tetherJoint.enabled = active;
+            if (!active)
+            {
+                tetherJoint.spring = 0f;
+                tetherJoint.damper = 0f;
+                tetherJoint.minDistance = 0f;
+                tetherJoint.maxDistance = Mathf.Max(limpMaximumDistance, 100f);
+            }
+            else
+            {
+                RefreshAnchor();
+                ApplyCurrentState();
+            }
         }
 
         public void RefreshAnchor()
@@ -101,7 +129,7 @@ namespace PancakeDevs.ApexPhysics
                 }
             }
 
-            if (tetherJoint == null)
+            if (tetherJoint == null && tetherActive)
             {
                 tetherJoint = gameObject.AddComponent<SpringJoint>();
             }
@@ -142,11 +170,12 @@ namespace PancakeDevs.ApexPhysics
         private void ApplyState(ApexRagdollState state)
         {
             EnsureJoint();
-            if (tetherJoint == null)
+            if (tetherJoint == null || !tetherActive)
             {
                 return;
             }
 
+            tetherJoint.enabled = true;
             bool limp = state == ApexRagdollState.Limp;
             tetherJoint.spring = limp ? 0f : spring;
             tetherJoint.damper = limp ? 0f : damper;
