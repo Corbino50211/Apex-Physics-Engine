@@ -6,9 +6,9 @@ namespace PancakeDevs.ApexPhysics.Editor
 {
     internal static class ApexBodyMenu
     {
-        private const string MenuPath = "GameObject/Apex Physics/Make Selected Object an Apex Body";
+        private const string MenuPath = "Apex Physics Engine/Bodies/Make Selected Object an Apex Body";
 
-        [MenuItem(MenuPath, false, 20)]
+        [MenuItem(MenuPath, false, 10)]
         private static void MakeSelectedObjectAnApexBody()
         {
             GameObject selected = Selection.activeGameObject;
