@@ -1,14 +1,14 @@
 # Supported Physical Humanoids
 
-Apex Physics Engine 0.1.1 adds a stable central support body to converted physical NPCs.
+Apex Physics Engine 0.1.4 uses a stable central support body for converted physical NPCs.
 
 ## Why the old NPC collapsed
 
-The 0.1.0 converter made every humanoid bone dynamic and asked the physical hips to move, balance, and carry the complete articulated body. That produces a genuine ragdoll, but it does not provide enough stable structure for ordinary standing and walking.
+The first humanoid converter made every bone dynamic and asked the physical hips to move, balance, and carry the complete articulated body. That creates a genuine ragdoll, but it does not provide enough stable structure for ordinary standing and walking.
 
 ## Supported-rig structure
 
-Apex now creates this hidden physics structure:
+Apex creates this hidden physics structure:
 
 ```text
 Apex Physical Humanoid
@@ -17,15 +17,24 @@ Apex Physical Humanoid
 │   ├── ApexBody
 │   ├── torso BoxCollider
 │   ├── lower-body CapsuleCollider
-│   └── ground-contact SphereCollider
+│   ├── ground-contact SphereCollider
+│   └── Hips Anchor
 ├── Visible Physical Character
 │   └── articulated physical skeleton
 └── Hidden Animated Target
 ```
 
-The support body is deliberately simple and stable. The visible body remains fully articulated and follows the hidden animated target through active-ragdoll muscles.
+The support body is deliberately simple and stable. The visible torso and limbs remain articulated and follow the hidden animated target through active-ragdoll muscles.
 
 This is an original Apex implementation inspired by the general simplified-body approach visible in physics-character rigs. It does not use proprietary Marrow source code.
+
+## Supported root constraint
+
+The hips are different from ordinary ragdoll limbs. Their ConfigurableJoint connects to the separate support Rigidbody rather than to the hips bone's normal transform parent.
+
+Apex therefore does not run the normal local-space muscle equation on support-connected hips. The support body owns root position and rotation through a rigid hips constraint. The spine, arms, hands, legs, feet, neck, and head continue using physical muscle drives.
+
+This prevents an invalid hips target rotation from folding the complete body around the support core.
 
 ## Active movement
 
@@ -34,7 +43,7 @@ While the active ragdoll is Active:
 - The support body remains upright.
 - The NavMesh navigator continues planning paths.
 - `ApexHumanoidSupportRig` moves and turns the support body.
-- The visible hips are connected to the support body.
+- The physical hips remain rigidly attached to the support body.
 - The torso and limbs remain physical and can collide with the environment.
 - The old hips-based `ApexNPCMotor` is disabled so the two motors do not fight.
 
@@ -43,31 +52,32 @@ While the active ragdoll is Active:
 When a sufficiently hard impact changes the ragdoll to Limp:
 
 - NPC support movement stops.
-- Upright constraints are released.
+- Upright constraints on the support Rigidbody are released.
 - The support core and articulated body can fall together.
-- Active-ragdoll muscles are disabled by the existing ragdoll state system.
+- Active-ragdoll limb muscles are disabled by the ragdoll state system.
 
 When recovery starts:
 
-- The support body is reset to an upright orientation near the physical hips.
+- The support body is reset to an upright orientation.
 - Upright constraints return.
-- Movement strength blends back with the active-ragdoll recovery progress.
+- Limb strength blends back with active-ragdoll recovery progress.
 - Normal NPC navigation resumes when the character becomes Active.
 
-## Upgrade an existing converted NPC
+## Upgrade or repair an existing NPC
 
-1. Update Apex Physics Engine to 0.1.1.
-2. Select the generated `Apex Physical Humanoid` wrapper.
-3. In the `ApexPhysicalHumanoid` inspector, find **Supported Physics Core**.
-4. Click **Install Supported Physics Core**.
-5. Build the NavMesh if needed.
-6. Enter Play Mode.
+1. Update Apex Physics Engine to 0.1.4.
+2. Exit Play Mode.
+3. Select the generated `Apex Physical Humanoid` wrapper.
+4. Find **Supported Physics Core** in the inspector.
+5. Click **Rebuild and Calibrate Standing Pose**.
+6. Save the scene.
+7. Enter Play Mode.
 
-Existing converted NPCs also install the support body automatically when Play Mode begins, but installing it in Edit Mode makes the generated shape visible and editable before testing.
+Calibration is intentionally unavailable during Play Mode so a fallen or deformed runtime pose cannot become the saved rest pose.
 
 ## New conversions
 
-New **Physical NPC** conversions install the support body automatically. Active-ragdoll-only conversions are unchanged. Physical-player support remains a separate later tuning pass because VR players require headset-height, climbing, and body-calibration rules that differ from autonomous NPCs.
+New **Physical NPC** conversions install the support body automatically. Active-ragdoll-only conversions are unchanged. Physical-player support remains a separate tuning path because VR players require headset height, climbing, and body-calibration behavior that differs from autonomous NPCs.
 
 ## Tuning
 
@@ -86,8 +96,9 @@ The generated proportions use the Humanoid Avatar's head and feet when available
 
 ## Current limitations
 
-- The support body is hidden but still contributes the main environmental collision volume.
+- The support body is hidden but still provides the main environmental collision volume.
 - Feet and limbs remain physical, but the support body—not footstep simulation—currently owns locomotion.
 - Dedicated stepping, slope adaptation, procedural foot placement, and obstacle climbing are future systems.
 - Recovery currently resets the support core upright before muscles blend back; dedicated front/back get-up animation selection remains future work.
+- Automatic limb joint axes and angular limits are starter values and may still need model-specific tuning.
 - Unity compilation and Play Mode tuning must be confirmed in the target Unity 6.2 project.
