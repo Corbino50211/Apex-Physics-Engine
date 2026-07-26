@@ -15,11 +15,15 @@ namespace PancakeDevs.ApexPhysics.Editor
             ApexPhysicalPlayerProfile profile = GetOrCreateProfile<ApexPhysicalPlayerProfile>(
                 "Apex Physical Player Profile.asset");
 
-            GameObject root = new GameObject("Apex Physical Player");
-            Undo.RegisterCreatedObjectUndo(root, "Create Apex Physical Player");
-            root.transform.position = Selection.activeTransform != null
+            GameObject setupRoot = new GameObject("Apex Physical Player Rig");
+            Undo.RegisterCreatedObjectUndo(setupRoot, "Create Apex Physical Player Rig");
+            setupRoot.transform.position = Selection.activeTransform != null
                 ? Selection.activeTransform.position
                 : Vector3.zero;
+
+            GameObject root = new GameObject("Apex Physical Player");
+            Undo.RegisterCreatedObjectUndo(root, "Create Apex Physical Player");
+            root.transform.SetParent(setupRoot.transform, false);
 
             Rigidbody body = Undo.AddComponent<Rigidbody>(root);
             body.useGravity = true;
@@ -35,7 +39,9 @@ namespace PancakeDevs.ApexPhysics.Editor
             Transform leftHandTarget = CreateChild(trackingRoot, "Left Hand Target", new Vector3(-0.3f, 1.25f, 0.35f));
             Transform rightHandTarget = CreateChild(trackingRoot, "Right Hand Target", new Vector3(0.3f, 1.25f, 0.35f));
 
+            Transform proxyRoot = CreateChild(setupRoot.transform, "Physical Proxies", Vector3.zero);
             ApexTrackedBodyPart physicalHead = CreateTrackedPart(
+                proxyRoot,
                 root.transform,
                 "Physical Head",
                 headTarget,
@@ -43,6 +49,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                 0.13f,
                 2f);
             ApexTrackedBodyPart physicalLeftHand = CreateTrackedPart(
+                proxyRoot,
                 root.transform,
                 "Physical Left Hand",
                 leftHandTarget,
@@ -50,6 +57,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                 0.09f,
                 1f);
             ApexTrackedBodyPart physicalRightHand = CreateTrackedPart(
+                proxyRoot,
                 root.transform,
                 "Physical Right Hand",
                 rightHandTarget,
@@ -91,8 +99,12 @@ namespace PancakeDevs.ApexPhysics.Editor
             if (animator != null)
             {
                 SerializedObject serializedController = new SerializedObject(controller);
-                serializedController.FindProperty("targetAnimator").objectReferenceValue = animator;
-                serializedController.ApplyModifiedPropertiesWithoutUndo();
+                SerializedProperty targetAnimator = serializedController.FindProperty("targetAnimator");
+                if (targetAnimator != null)
+                {
+                    targetAnimator.objectReferenceValue = animator;
+                    serializedController.ApplyModifiedPropertiesWithoutUndo();
+                }
             }
 
             EditorUtility.SetDirty(controller);
@@ -163,6 +175,7 @@ namespace PancakeDevs.ApexPhysics.Editor
         }
 
         private static ApexTrackedBodyPart CreateTrackedPart(
+            Transform proxyParent,
             Transform owner,
             string name,
             Transform target,
@@ -172,7 +185,7 @@ namespace PancakeDevs.ApexPhysics.Editor
         {
             GameObject part = new GameObject(name);
             Undo.RegisterCreatedObjectUndo(part, "Create " + name);
-            part.transform.SetParent(owner, false);
+            part.transform.SetParent(proxyParent, false);
             part.transform.position = target.position;
             part.transform.rotation = target.rotation;
 
