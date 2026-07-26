@@ -73,6 +73,7 @@ namespace PancakeDevs.ApexPhysics
         {
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
+                TunePhysicalNpcMuscles();
                 EnsureSupportRig();
                 EnsurePhysicalController();
             }
@@ -112,6 +113,7 @@ namespace PancakeDevs.ApexPhysics
 
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
+                TunePhysicalNpcMuscles();
                 EnsureSupportRig();
                 EnsurePhysicalController();
             }
@@ -191,6 +193,52 @@ namespace PancakeDevs.ApexPhysics
             }
 
             return torsoHarness;
+        }
+
+        public void TunePhysicalNpcMuscles()
+        {
+            if (mode != ApexPhysicalHumanoidMode.PhysicalNPC || physicalCharacter == null)
+            {
+                return;
+            }
+
+            Animator animator = physicalCharacter.GetComponentInChildren<Animator>(true);
+            if (animator == null || !animator.isHuman)
+            {
+                return;
+            }
+
+            SetBoneMuscle(animator, HumanBodyBones.Spine, 1.65f);
+            SetBoneMuscle(animator, HumanBodyBones.Chest, 1.65f);
+            SetBoneMuscle(animator, HumanBodyBones.UpperChest, 1.65f);
+            SetBoneMuscle(animator, HumanBodyBones.Neck, 1.15f);
+            SetBoneMuscle(animator, HumanBodyBones.Head, 1.05f);
+
+            SetBoneMuscle(animator, HumanBodyBones.LeftUpperLeg, 1.45f);
+            SetBoneMuscle(animator, HumanBodyBones.RightUpperLeg, 1.45f);
+            SetBoneMuscle(animator, HumanBodyBones.LeftLowerLeg, 1.35f);
+            SetBoneMuscle(animator, HumanBodyBones.RightLowerLeg, 1.35f);
+            SetBoneMuscle(animator, HumanBodyBones.LeftFoot, 1.1f);
+            SetBoneMuscle(animator, HumanBodyBones.RightFoot, 1.1f);
+
+            SetBoneMuscle(animator, HumanBodyBones.LeftShoulder, 1f);
+            SetBoneMuscle(animator, HumanBodyBones.RightShoulder, 1f);
+            SetBoneMuscle(animator, HumanBodyBones.LeftUpperArm, 0.9f);
+            SetBoneMuscle(animator, HumanBodyBones.RightUpperArm, 0.9f);
+            SetBoneMuscle(animator, HumanBodyBones.LeftLowerArm, 0.85f);
+            SetBoneMuscle(animator, HumanBodyBones.RightLowerArm, 0.85f);
+        }
+
+        private static void SetBoneMuscle(Animator animator, HumanBodyBones role, float multiplier)
+        {
+            Transform bone = animator.GetBoneTransform(role);
+            if (bone == null)
+            {
+                return;
+            }
+
+            ApexRagdollBone ragdollBone = bone.GetComponent<ApexRagdollBone>();
+            ragdollBone?.SetMuscleMultiplier(multiplier);
         }
 
         private void DisableLegacySupportAddons()
