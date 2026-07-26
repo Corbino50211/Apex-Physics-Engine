@@ -2,6 +2,27 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.0.9] - 2026-07-26
+
+### Added
+
+- `ApexCrate` base assets with stable barcodes, titles, descriptions, tags, and crate categories.
+- `ApexSpawnableCrate` prefab assets for reusable runtime content.
+- `ApexPallet` assets for grouping crates that should be registered together.
+- `ApexWarehouse` runtime registry with persistent-scene support and barcode resolution.
+- Direct and barcode-based crate spawning APIs.
+- `ApexCrateSpawner` scene markers with Awake, Start, End Of Frame, and Manual timing.
+- Multi-instance spawning, position stepping, optional parenting, spawn-once rules, and runtime clearing.
+- `ApexCrateInstance` identity metadata for future save, reset, networking, and mod systems.
+- One-click crate creation from selected prefabs, pallet creation, warehouse creation, and spawner placement.
+- Warehouse, crate, and spawner inspectors with runtime diagnostics.
+- Warehouse asset validation for duplicate barcodes and missing prefabs.
+
+### Notes
+
+- Version 0.0.9 uses direct Unity prefab references. Addressables, asset bundles, asynchronous mod pallets, and network-spawn adapters remain future warehouse layers.
+- Unity compilation and level-load spawning require validation in the Unity 6.2 test project before the draft release is merged.
+
 ## [0.0.8] - 2026-07-26
 
 ### Added
