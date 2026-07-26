@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity VR physics framework for torso-harnessed, locoball-supported physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
+  "description": "A modular Unity VR physics framework for animated physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -15,13 +15,12 @@
     "vr",
     "humanoid",
     "humanoid-converter",
+    "physical-controller",
+    "animated-target",
+    "procedural-gait",
+    "get-up",
     "support-rig",
-    "locoball",
     "locomotion",
-    "foot-tether",
-    "torso-harness",
-    "pose-calibration",
-    "root-constraint",
     "interaction",
     "ragdoll",
     "active-ragdoll",
