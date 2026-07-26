@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity physics framework for physical players, active ragdolls, NPCs, grabbable objects, mechanisms, damage, navigation, automatic lighting workflows, and reusable physics-driven gameplay.",
+  "description": "A modular Unity physics framework for physical players, active ragdolls, NPCs, grabbable objects, barcode-driven crates, navigation, automatic lighting workflows, and reusable physics-driven gameplay.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -23,6 +23,11 @@
     "npc",
     "ai",
     "behavior",
+    "warehouse",
+    "crate",
+    "pallet",
+    "barcode",
+    "spawnable",
     "lighting",
     "lightmapping"
   ],
