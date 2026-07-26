@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "displayName": "Apex Physics Engine",
-  "description": "A modular Unity VR physics framework for supported physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
+  "description": "A modular Unity VR physics framework for floor-aligned supported physical humanoids, active NPCs, full-body players, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
