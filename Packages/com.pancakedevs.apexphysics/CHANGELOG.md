@@ -2,6 +2,24 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.1.4] - 2026-07-26
+
+### Fixed
+
+- Supported physical NPC hips are no longer driven by the ordinary local-space ragdoll muscle equation after being connected to the separate support Rigidbody.
+- Fixed support-connected hips applying an invalid target rotation and folding the spine and legs around the central support core.
+- Root position and rotation are now owned by the simplified support body, while the torso and limbs continue using active-ragdoll muscles.
+- The support-connected hips joint now uses a rigid root constraint with zero secondary muscle drive.
+
+### Changed
+
+- Standing-pose calibration remains disabled during Play Mode so a deformed runtime pose cannot become the saved rest pose.
+
+### Notes
+
+- Existing 0.1.3 NPCs can be repaired in place. Update, exit Play Mode, run **Rebuild and Calibrate Standing Pose**, save the scene, and test again.
+- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 test project before the draft release is merged.
+
 ## [0.1.3] - 2026-07-26
 
 ### Fixed
