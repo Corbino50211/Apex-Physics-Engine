@@ -8,10 +8,10 @@ namespace PancakeDevs.ApexPhysics.Editor
 {
     internal static class ApexNavigationMenu
     {
-        private const string CreateSurfacePath = "GameObject/Apex Physics/Create Navigation Surface";
-        private const string MakeNavigatorPath = "GameObject/Apex Physics/Make Selected Object an NPC Navigator";
+        private const string CreateSurfacePath = "Apex Physics Engine/Navigation/Create Navigation Surface";
+        private const string MakeNavigatorPath = "Apex Physics Engine/Navigation/Make Selected Object an NPC Navigator";
 
-        [MenuItem(CreateSurfacePath, false, 40)]
+        [MenuItem(CreateSurfacePath, false, 30)]
         private static void CreateNavigationSurface()
         {
             GameObject navigationObject = new GameObject("Apex Navigation Surface");
@@ -33,7 +33,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorGUIUtility.PingObject(navigationObject);
         }
 
-        [MenuItem(MakeNavigatorPath, false, 41)]
+        [MenuItem(MakeNavigatorPath, false, 31)]
         private static void MakeSelectedObjectNavigator()
         {
             GameObject selected = Selection.activeGameObject;
