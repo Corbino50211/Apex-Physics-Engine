@@ -8,16 +8,18 @@ namespace PancakeDevs.ApexPhysics.Editor
     internal static class ApexHumanoidLocoballMenu
     {
         private const string MenuPath =
+            "Apex Physics Engine/Characters/Rebuild Selected NPC Physical Controller";
+        private const string LegacyMenuPath =
             "Apex Physics Engine/Characters/Rebuild Selected NPC Support Rig";
 
         [MenuItem(MenuPath, false, 235)]
-        private static void RebuildSelectedNpcSupportRig()
+        private static void RebuildSelectedNpcPhysicalController()
         {
             if (Application.isPlaying)
             {
                 EditorUtility.DisplayDialog(
-                    "Apex NPC Support Rig",
-                    "Exit Play Mode before rebuilding the locoball, torso harness, and standing pose.",
+                    "Apex NPC Physical Controller",
+                    "Exit Play Mode before rebuilding the physical controller.",
                     "OK");
                 return;
             }
@@ -30,14 +32,16 @@ namespace PancakeDevs.ApexPhysics.Editor
             if (humanoid == null || humanoid.Mode != ApexPhysicalHumanoidMode.PhysicalNPC)
             {
                 EditorUtility.DisplayDialog(
-                    "Apex NPC Support Rig",
+                    "Apex NPC Physical Controller",
                     "Select a generated Apex Physical NPC or one of its children.",
                     "OK");
                 return;
             }
 
             int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("Rebuild Apex NPC Support Rig");
+            Undo.SetCurrentGroupName("Rebuild Apex NPC Physical Controller");
+
+            RemoveLegacySupportAddons(humanoid);
 
             ApexHumanoidSupportRig supportRig = humanoid.SupportRig != null
                 ? humanoid.SupportRig
@@ -47,45 +51,33 @@ namespace PancakeDevs.ApexPhysics.Editor
                 supportRig = Undo.AddComponent<ApexHumanoidSupportRig>(humanoid.gameObject);
             }
 
+            Undo.RecordObject(supportRig, "Rebuild Apex NPC Locomotion Body");
             supportRig.Configure(humanoid);
+            supportRig.RebuildSupport();
+            supportRig.SnapSupportToHumanoid();
 
-            ApexHumanoidLocoballRig locoballRig = humanoid.LocoballRig != null
-                ? humanoid.LocoballRig
-                : humanoid.GetComponent<ApexHumanoidLocoballRig>();
-            if (locoballRig == null)
+            ApexHumanoidPhysicalController controller = humanoid.PhysicalController != null
+                ? humanoid.PhysicalController
+                : humanoid.GetComponent<ApexHumanoidPhysicalController>();
+            if (controller == null)
             {
-                locoballRig = Undo.AddComponent<ApexHumanoidLocoballRig>(humanoid.gameObject);
+                controller = Undo.AddComponent<ApexHumanoidPhysicalController>(humanoid.gameObject);
             }
 
-            ApexHumanoidTorsoHarness torsoHarness = humanoid.TorsoHarness != null
-                ? humanoid.TorsoHarness
-                : humanoid.GetComponent<ApexHumanoidTorsoHarness>();
-            if (torsoHarness == null)
+            Undo.RecordObject(controller, "Configure Apex NPC Physical Controller");
+            controller.Configure(humanoid);
+
+            if (humanoid.ActiveRagdoll != null)
             {
-                torsoHarness = Undo.AddComponent<ApexHumanoidTorsoHarness>(humanoid.gameObject);
+                Undo.RecordObject(humanoid.ActiveRagdoll, "Refresh Apex Active Ragdoll");
+                humanoid.ActiveRagdoll.RefreshBones();
+                humanoid.ActiveRagdoll.CaptureCurrentPose();
+                EditorUtility.SetDirty(humanoid.ActiveRagdoll);
             }
-
-            Undo.RecordObject(humanoid, "Assign Apex NPC Support Rig");
-            Undo.RecordObject(supportRig, "Rebuild Apex NPC Support");
-            Undo.RecordObject(locoballRig, "Rebuild Apex NPC Locoball");
-            Undo.RecordObject(torsoHarness, "Rebuild Apex NPC Torso Harness");
-
-            locoballRig.Configure(humanoid);
-            locoballRig.RebuildLocoball();
-            torsoHarness.Configure(humanoid);
-            torsoHarness.RebuildHarness();
-
-            humanoid.ActiveRagdoll?.RefreshBones();
-            humanoid.ActiveRagdoll?.CaptureCurrentPose();
 
             EditorUtility.SetDirty(humanoid);
             EditorUtility.SetDirty(supportRig);
-            EditorUtility.SetDirty(locoballRig);
-            EditorUtility.SetDirty(torsoHarness);
-            if (humanoid.ActiveRagdoll != null)
-            {
-                EditorUtility.SetDirty(humanoid.ActiveRagdoll);
-            }
+            EditorUtility.SetDirty(controller);
 
             if (humanoid.gameObject.scene.IsValid())
             {
@@ -97,8 +89,73 @@ namespace PancakeDevs.ApexPhysics.Editor
             Undo.CollapseUndoOperations(undoGroup);
         }
 
+        [MenuItem(LegacyMenuPath, false, 236)]
+        private static void RebuildSelectedNpcPhysicalControllerLegacyAlias()
+        {
+            RebuildSelectedNpcPhysicalController();
+        }
+
+        private static void RemoveLegacySupportAddons(ApexPhysicalHumanoid humanoid)
+        {
+            ApexHumanoidFootTether[] tethers =
+                humanoid.GetComponentsInChildren<ApexHumanoidFootTether>(true);
+            for (int i = 0; i < tethers.Length; i++)
+            {
+                ApexHumanoidFootTether tether = tethers[i];
+                if (tether == null)
+                {
+                    continue;
+                }
+
+                SpringJoint joint = tether.Joint;
+                if (joint != null)
+                {
+                    Undo.DestroyObjectImmediate(joint);
+                }
+
+                Undo.DestroyObjectImmediate(tether);
+            }
+
+            ApexHumanoidLocoballRig locoballRig =
+                humanoid.GetComponent<ApexHumanoidLocoballRig>();
+            if (locoballRig != null)
+            {
+                Undo.DestroyObjectImmediate(locoballRig);
+            }
+
+            ApexHumanoidTorsoHarness torsoHarness =
+                humanoid.GetComponent<ApexHumanoidTorsoHarness>();
+            if (torsoHarness != null)
+            {
+                Undo.DestroyObjectImmediate(torsoHarness);
+            }
+
+            ApexHumanoidSupportRig supportRig = humanoid.SupportRig != null
+                ? humanoid.SupportRig
+                : humanoid.GetComponent<ApexHumanoidSupportRig>();
+            if (supportRig == null || supportRig.SupportBody == null)
+            {
+                return;
+            }
+
+            Transform legacyLocoball =
+                supportRig.SupportBody.transform.Find("Apex Humanoid Locoball");
+            if (legacyLocoball != null)
+            {
+                Undo.DestroyObjectImmediate(legacyLocoball.gameObject);
+            }
+
+            Transform legacyChestAnchor =
+                supportRig.SupportBody.transform.Find("Chest Harness Anchor");
+            if (legacyChestAnchor != null)
+            {
+                Undo.DestroyObjectImmediate(legacyChestAnchor.gameObject);
+            }
+        }
+
         [MenuItem(MenuPath, true)]
-        private static bool ValidateRebuildSelectedNpcSupportRig()
+        [MenuItem(LegacyMenuPath, true)]
+        private static bool ValidateRebuildSelectedNpcPhysicalController()
         {
             GameObject selected = Selection.activeGameObject;
             ApexPhysicalHumanoid humanoid = selected != null
