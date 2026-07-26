@@ -23,6 +23,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexHumanoidTargetRootDriver targetRootDriver;
         [SerializeField] private ApexHumanoidTrackingDriver trackingDriver;
         [SerializeField] private ApexRagdollCollisionFilter collisionFilter;
+        [SerializeField] private ApexHumanoidSupportRig supportRig;
         [SerializeField] private ApexHumanoidPlayerMotor humanoidPlayerMotor;
         [SerializeField] private ApexPhysicalPlayerRig legacyPlayerRig;
         [SerializeField] private ApexNPCNavigator npcNavigator;
@@ -39,11 +40,20 @@ namespace PancakeDevs.ApexPhysics
         public ApexHumanoidTargetRootDriver TargetRootDriver => targetRootDriver;
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
         public ApexRagdollCollisionFilter CollisionFilter => collisionFilter;
+        public ApexHumanoidSupportRig SupportRig => supportRig;
         public ApexHumanoidPlayerMotor HumanoidPlayerMotor => humanoidPlayerMotor;
         public ApexPhysicalPlayerRig LegacyPlayerRig => legacyPlayerRig;
         public ApexNPCNavigator NPCNavigator => npcNavigator;
         public ApexNPCMotor NPCMotor => npcMotor;
         public ApexNPCBrain NPCBrain => npcBrain;
+
+        private void Awake()
+        {
+            if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                EnsureSupportRig();
+            }
+        }
 
         public void Configure(
             ApexPhysicalHumanoidMode newMode,
@@ -76,6 +86,32 @@ namespace PancakeDevs.ApexPhysics
             npcNavigator = newNpcNavigator;
             npcMotor = newNpcMotor;
             npcBrain = newNpcBrain;
+
+            if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                EnsureSupportRig();
+            }
+        }
+
+        public ApexHumanoidSupportRig EnsureSupportRig()
+        {
+            if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                return supportRig;
+            }
+
+            if (supportRig == null)
+            {
+                supportRig = GetComponent<ApexHumanoidSupportRig>();
+            }
+
+            if (supportRig == null)
+            {
+                supportRig = gameObject.AddComponent<ApexHumanoidSupportRig>();
+            }
+
+            supportRig.Configure(this);
+            return supportRig;
         }
     }
 }
