@@ -17,6 +17,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private CapsuleCollider lowerBodyCollider;
         [SerializeField] private SphereCollider groundCollider;
         [SerializeField] private ConfigurableJoint hipsJoint;
+        [SerializeField] private Transform hipsAnchor;
 
         [Header("Humanoid Systems")]
         [SerializeField] private ApexPhysicalHumanoid humanoid;
@@ -38,16 +39,24 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField, Min(0.01f)] private float torsoWidthRatio = 0.30f;
         [SerializeField, Min(0.01f)] private float torsoDepthRatio = 0.18f;
         [SerializeField, Min(0.01f)] private float torsoHeightRatio = 0.28f;
+        [SerializeField, Min(0f)] private float floorClearanceRatio = 0.012f;
         [SerializeField, Min(0.01f)] private float supportMass = 45f;
         [SerializeField] private bool disableLegacyNpcMotor = true;
+        [SerializeField] private bool disableRagdollSelfCollision = true;
+
+        [Header("Standing Pose")]
+        [SerializeField] private bool standingOffsetCaptured;
+        [SerializeField] private Vector3 standingHipsLocalOffset;
 
         private readonly List<Collider> supportColliders = new List<Collider>();
-        private RigidbodyConstraints originalConstraints;
+        private readonly RaycastHit[] groundHits = new RaycastHit[24];
+        private RigidbodyConstraints supportedConstraints;
         private bool subscribed;
         private bool configured;
         private float characterHeight = 1.8f;
 
         public Rigidbody SupportBody => supportBody;
+        public Transform HipsAnchor => hipsAnchor;
         public ApexPhysicalHumanoid Humanoid => humanoid;
         public bool IsSupported => activeRagdoll == null || activeRagdoll.State != ApexRagdollState.Limp;
         public float CharacterHeight => characterHeight;
@@ -91,11 +100,12 @@ namespace PancakeDevs.ApexPhysics
             activeRagdoll = owner != null ? owner.ActiveRagdoll : null;
             navigator = owner != null ? owner.NPCNavigator : null;
             legacyNpcMotor = owner != null ? owner.NPCMotor : null;
+
             BuildOrRepairSupportBody();
             ConfigureHipsJoint();
             ConfigureTargetRootDriver();
-            IgnoreInternalCollisions();
-            configured = supportBody != null && hipsJoint != null;
+            ConfigureCollisionFiltering();
+            configured = supportBody != null && hipsJoint != null && hipsAnchor != null;
 
             if (disableLegacyNpcMotor && legacyNpcMotor != null)
             {
@@ -112,6 +122,11 @@ namespace PancakeDevs.ApexPhysics
         public void RebuildSupport()
         {
             configured = false;
+            if (!Application.isPlaying)
+            {
+                standingOffsetCaptured = false;
+            }
+
             Configure(humanoid != null ? humanoid : GetComponent<ApexPhysicalHumanoid>());
         }
 
@@ -123,16 +138,27 @@ namespace PancakeDevs.ApexPhysics
             }
 
             Transform hips = humanoid.PhysicalHips.transform;
-            Vector3 forward = Vector3.ProjectOnPlane(hips.forward, Vector3.up);
-            if (forward.sqrMagnitude < 0.0001f)
-            {
-                forward = Vector3.forward;
-            }
+            Quaternion uprightRotation = GetUprightRotation(hips);
+            float groundHeight = ResolveGroundHeight(hips.position);
+            float lowestLocalPoint = GetLowestSupportLocalY();
 
-            supportBody.position = hips.position;
-            supportBody.rotation = Quaternion.LookRotation(forward.normalized, Vector3.up);
+            Vector3 supportPosition = hips.position;
+            supportPosition.y = groundHeight - lowestLocalPoint + characterHeight * floorClearanceRatio;
+
+            supportBody.position = supportPosition;
+            supportBody.rotation = uprightRotation;
             supportBody.velocity = Vector3.zero;
             supportBody.angularVelocity = Vector3.zero;
+
+            if (!standingOffsetCaptured)
+            {
+                standingHipsLocalOffset = supportBody.transform.InverseTransformPoint(hips.position);
+                standingOffsetCaptured = true;
+            }
+
+            ConfigureHipsAnchor();
+            ConfigureJointAnchors();
+            humanoid.TargetRootDriver?.SnapNow();
         }
 
         private void EnsureConfigured()
@@ -165,12 +191,7 @@ namespace PancakeDevs.ApexPhysics
                 supportTransform.SetParent(transform, true);
             }
 
-            Transform hips = humanoid.PhysicalHips.transform;
-            supportTransform.SetPositionAndRotation(
-                hips.position,
-                Quaternion.Euler(0f, hips.eulerAngles.y, 0f));
             supportTransform.localScale = Vector3.one;
-
             supportBody = GetOrAdd<Rigidbody>(supportTransform.gameObject);
             supportBody.mass = supportMass;
             supportBody.useGravity = true;
@@ -180,7 +201,7 @@ namespace PancakeDevs.ApexPhysics
             supportBody.centerOfMass = Vector3.down * characterHeight * 0.18f;
             supportBody.solverIterations = 16;
             supportBody.solverVelocityIterations = 8;
-            originalConstraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            supportedConstraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
             GetOrAdd<ApexBody>(supportTransform.gameObject);
 
@@ -207,6 +228,30 @@ namespace PancakeDevs.ApexPhysics
             supportColliders.Add(torsoCollider);
             supportColliders.Add(lowerBodyCollider);
             supportColliders.Add(groundCollider);
+
+            Transform hips = humanoid.PhysicalHips.transform;
+            Quaternion uprightRotation = GetUprightRotation(hips);
+            float groundHeight = ResolveGroundHeight(hips.position);
+            float lowestLocalPoint = GetLowestSupportLocalY();
+            Vector3 supportPosition = hips.position;
+            supportPosition.y = groundHeight - lowestLocalPoint + characterHeight * floorClearanceRatio;
+            supportTransform.SetPositionAndRotation(supportPosition, uprightRotation);
+
+            if (!standingOffsetCaptured || !Application.isPlaying)
+            {
+                standingHipsLocalOffset = supportTransform.InverseTransformPoint(hips.position);
+                standingOffsetCaptured = true;
+            }
+
+            hipsAnchor = supportTransform.Find("Hips Anchor");
+            if (hipsAnchor == null)
+            {
+                GameObject anchorObject = new GameObject("Hips Anchor");
+                hipsAnchor = anchorObject.transform;
+                hipsAnchor.SetParent(supportTransform, false);
+            }
+
+            ConfigureHipsAnchor();
         }
 
         private void ConfigureHipsJoint()
@@ -224,7 +269,9 @@ namespace PancakeDevs.ApexPhysics
             }
 
             hipsJoint.connectedBody = supportBody;
-            hipsJoint.autoConfigureConnectedAnchor = true;
+            hipsJoint.autoConfigureConnectedAnchor = false;
+            hipsJoint.anchor = Vector3.zero;
+            ConfigureJointAnchors();
             hipsJoint.configuredInWorldSpace = false;
             hipsJoint.xMotion = ConfigurableJointMotion.Locked;
             hipsJoint.yMotion = ConfigurableJointMotion.Locked;
@@ -244,23 +291,55 @@ namespace PancakeDevs.ApexPhysics
             hipsJoint.projectionAngle = 8f;
         }
 
+        private void ConfigureJointAnchors()
+        {
+            if (hipsJoint == null || supportBody == null)
+            {
+                return;
+            }
+
+            hipsJoint.connectedAnchor = standingHipsLocalOffset;
+        }
+
+        private void ConfigureHipsAnchor()
+        {
+            if (hipsAnchor == null)
+            {
+                return;
+            }
+
+            hipsAnchor.localPosition = standingHipsLocalOffset;
+            hipsAnchor.localRotation = Quaternion.identity;
+            hipsAnchor.localScale = Vector3.one;
+        }
+
         private void ConfigureTargetRootDriver()
         {
             if (humanoid == null || humanoid.TargetRootDriver == null ||
-                humanoid.TargetHips == null || supportBody == null)
+                humanoid.TargetHips == null || hipsAnchor == null)
             {
                 return;
             }
 
             humanoid.TargetRootDriver.Configure(
-                supportBody.transform,
+                hipsAnchor,
                 humanoid.TargetHips,
                 true,
                 true);
             humanoid.TargetRootDriver.SnapNow();
         }
 
-        private void IgnoreInternalCollisions()
+        private void ConfigureCollisionFiltering()
+        {
+            IgnoreSupportBodyCollisions();
+
+            if (disableRagdollSelfCollision && humanoid != null && humanoid.CollisionFilter != null)
+            {
+                humanoid.CollisionFilter.SetIgnoreAllSelfCollisions(true);
+            }
+        }
+
+        private void IgnoreSupportBodyCollisions()
         {
             if (humanoid == null || humanoid.PhysicalCharacter == null)
             {
@@ -307,10 +386,13 @@ namespace PancakeDevs.ApexPhysics
             Vector3 direction = Vector3.ProjectOnPlane(desiredVelocity, Vector3.up);
             if (direction.sqrMagnitude > 0.0001f)
             {
-                float angleError = Vector3.SignedAngle(
-                    Vector3.ProjectOnPlane(supportBody.transform.forward, Vector3.up),
-                    direction,
-                    Vector3.up);
+                Vector3 currentForward = Vector3.ProjectOnPlane(supportBody.transform.forward, Vector3.up);
+                if (currentForward.sqrMagnitude < 0.0001f)
+                {
+                    currentForward = Vector3.forward;
+                }
+
+                float angleError = Vector3.SignedAngle(currentForward, direction, Vector3.up);
                 float currentYawVelocity = Vector3.Dot(supportBody.angularVelocity, Vector3.up);
                 float desiredYawVelocity = angleError * Mathf.Deg2Rad * turnResponsiveness;
                 float torque = Mathf.Clamp(
@@ -407,6 +489,7 @@ namespace PancakeDevs.ApexPhysics
                 {
                     legacyNpcMotor.enabled = false;
                 }
+
                 return;
             }
 
@@ -415,11 +498,164 @@ namespace PancakeDevs.ApexPhysics
                 SnapSupportToHumanoid();
             }
 
-            supportBody.constraints = originalConstraints;
+            supportBody.constraints = supportedConstraints;
             if (disableLegacyNpcMotor && legacyNpcMotor != null)
             {
                 legacyNpcMotor.enabled = false;
             }
+        }
+
+        private Quaternion GetUprightRotation(Transform hips)
+        {
+            Vector3 forward = hips != null
+                ? Vector3.ProjectOnPlane(hips.forward, Vector3.up)
+                : Vector3.forward;
+            if (forward.sqrMagnitude < 0.0001f)
+            {
+                forward = transform.forward;
+                forward = Vector3.ProjectOnPlane(forward, Vector3.up);
+            }
+
+            if (forward.sqrMagnitude < 0.0001f)
+            {
+                forward = Vector3.forward;
+            }
+
+            return Quaternion.LookRotation(forward.normalized, Vector3.up);
+        }
+
+        private float ResolveGroundHeight(Vector3 hipsPosition)
+        {
+            if (TryFindExternalGroundHeight(hipsPosition, out float groundHeight))
+            {
+                return groundHeight;
+            }
+
+            if (TryGetFootSoleHeight(out float soleHeight))
+            {
+                return soleHeight;
+            }
+
+            return hipsPosition.y - characterHeight * 0.55f;
+        }
+
+        private bool TryFindExternalGroundHeight(Vector3 hipsPosition, out float groundHeight)
+        {
+            Vector3 origin = hipsPosition + Vector3.up * characterHeight;
+            float distance = characterHeight * 3f;
+            int hitCount = Physics.RaycastNonAlloc(
+                origin,
+                Vector3.down,
+                groundHits,
+                distance,
+                ~0,
+                QueryTriggerInteraction.Ignore);
+
+            float closestDistance = float.PositiveInfinity;
+            groundHeight = 0f;
+            bool found = false;
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = groundHits[i];
+                if (hit.collider == null || IsInternalCollider(hit.collider))
+                {
+                    continue;
+                }
+
+                if (hit.distance < closestDistance)
+                {
+                    closestDistance = hit.distance;
+                    groundHeight = hit.point.y;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
+        private bool IsInternalCollider(Collider candidate)
+        {
+            if (candidate == null)
+            {
+                return true;
+            }
+
+            if (supportColliders.Contains(candidate))
+            {
+                return true;
+            }
+
+            if (humanoid != null && humanoid.PhysicalCharacter != null &&
+                candidate.transform.IsChildOf(humanoid.PhysicalCharacter.transform))
+            {
+                return true;
+            }
+
+            return humanoid != null && humanoid.AnimatedTargetCharacter != null &&
+                   candidate.transform.IsChildOf(humanoid.AnimatedTargetCharacter.transform);
+        }
+
+        private bool TryGetFootSoleHeight(out float soleHeight)
+        {
+            soleHeight = 0f;
+            if (humanoid == null || humanoid.PhysicalCharacter == null)
+            {
+                return false;
+            }
+
+            Animator animator = humanoid.PhysicalCharacter.GetComponentInChildren<Animator>(true);
+            if (animator == null || !animator.isHuman)
+            {
+                return false;
+            }
+
+            bool found = false;
+            float lowest = float.PositiveInfinity;
+            IncludeFoot(animator.GetBoneTransform(HumanBodyBones.LeftFoot), ref found, ref lowest);
+            IncludeFoot(animator.GetBoneTransform(HumanBodyBones.RightFoot), ref found, ref lowest);
+            if (!found)
+            {
+                return false;
+            }
+
+            soleHeight = lowest;
+            return true;
+        }
+
+        private void IncludeFoot(Transform foot, ref bool found, ref float lowest)
+        {
+            if (foot == null)
+            {
+                return;
+            }
+
+            Collider footCollider = foot.GetComponent<Collider>();
+            float candidate = footCollider != null
+                ? footCollider.bounds.min.y
+                : foot.position.y - characterHeight * 0.035f;
+            lowest = Mathf.Min(lowest, candidate);
+            found = true;
+        }
+
+        private float GetLowestSupportLocalY()
+        {
+            float lowest = 0f;
+            if (torsoCollider != null)
+            {
+                lowest = Mathf.Min(lowest, torsoCollider.center.y - torsoCollider.size.y * 0.5f);
+            }
+
+            if (lowerBodyCollider != null)
+            {
+                lowest = Mathf.Min(lowest, lowerBodyCollider.center.y - lowerBodyCollider.height * 0.5f);
+            }
+
+            if (groundCollider != null)
+            {
+                lowest = Mathf.Min(lowest, groundCollider.center.y - groundCollider.radius);
+            }
+
+            return lowest;
         }
 
         private float CalculateCharacterHeight()
@@ -493,6 +729,7 @@ namespace PancakeDevs.ApexPhysics
             torsoWidthRatio = Mathf.Max(0.01f, torsoWidthRatio);
             torsoDepthRatio = Mathf.Max(0.01f, torsoDepthRatio);
             torsoHeightRatio = Mathf.Max(0.01f, torsoHeightRatio);
+            floorClearanceRatio = Mathf.Max(0f, floorClearanceRatio);
             supportMass = Mathf.Max(0.01f, supportMass);
         }
 
