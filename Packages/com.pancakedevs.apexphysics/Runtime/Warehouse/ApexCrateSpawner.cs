@@ -84,8 +84,13 @@ namespace PancakeDevs.ApexPhysics
                 return null;
             }
 
-            ApexWarehouse warehouse = ApexWarehouse.GetOrCreate();
-            return warehouse.TryGetCrate(barcode, out ApexSpawnableCrate resolved)
+            ApexWarehouse warehouse = ApexWarehouse.Instance;
+            if (warehouse == null && Application.isPlaying)
+            {
+                warehouse = ApexWarehouse.GetOrCreate();
+            }
+
+            return warehouse != null && warehouse.TryGetCrate(barcode, out ApexSpawnableCrate resolved)
                 ? resolved
                 : null;
         }
