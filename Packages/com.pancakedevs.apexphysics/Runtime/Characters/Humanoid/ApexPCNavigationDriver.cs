@@ -6,7 +6,8 @@ namespace PancakeDevs.ApexPhysics
     /// <summary>
     /// Bridges an older Humanoid-root navigator to the authoritative Apex PC motor.
     /// It keeps NavMesh planning projected beneath the motor, wakes the motor when a
-    /// destination exists, and retries paths that become invalid, partial, or stuck.
+    /// destination exists, and replaces or retries paths that become invalid, partial,
+    /// or stuck.
     /// </summary>
     [DefaultExecutionOrder(-260)]
     [DisallowMultipleComponent]
@@ -15,6 +16,7 @@ namespace PancakeDevs.ApexPhysics
     {
         [SerializeField] private ApexPCPhysicalCharacter character;
         [SerializeField] private ApexNPCNavigator navigator;
+        [SerializeField] private ApexNPCBrain brain;
 
         [Header("Recovery")]
         [SerializeField, Min(0.1f)] private float stuckCheckDelay = 1.25f;
@@ -66,14 +68,14 @@ namespace PancakeDevs.ApexPhysics
 
             if (!navigator.IsOnNavMesh)
             {
-                RetryPathWhenAllowed();
+                RetryOrReplacePath();
                 return;
             }
 
             if (!navigator.IsPathPending &&
                 (!navigator.HasPath || navigator.PathStatus != NavMeshPathStatus.PathComplete))
             {
-                RetryPathWhenAllowed();
+                RetryOrReplacePath();
                 return;
             }
 
@@ -99,8 +101,15 @@ namespace PancakeDevs.ApexPhysics
 
             if (askingToMove && progress < minimumProgressDistance)
             {
-                navigator.TryBindToNavMesh();
-                navigator.ForceRepath();
+                if (IsWandering())
+                {
+                    ReplaceWanderDestination();
+                }
+                else
+                {
+                    navigator.TryBindToNavMesh();
+                    navigator.ForceRepath();
+                }
                 motorBody.WakeUp();
             }
         }
@@ -111,6 +120,9 @@ namespace PancakeDevs.ApexPhysics
             character = owner;
             navigator = owner != null && owner.Humanoid != null
                 ? owner.Humanoid.NPCNavigator
+                : null;
+            brain = owner != null && owner.Humanoid != null
+                ? owner.Humanoid.NPCBrain
                 : null;
             motorBody = owner != null ? owner.MotorBody : null;
 
@@ -134,6 +146,11 @@ namespace PancakeDevs.ApexPhysics
             if (navigator == null)
             {
                 navigator = character.Humanoid.NPCNavigator;
+            }
+
+            if (brain == null)
+            {
+                brain = character.Humanoid.NPCBrain;
             }
 
             if (motorBody == null)
@@ -177,7 +194,7 @@ namespace PancakeDevs.ApexPhysics
             agent.autoRepath = true;
         }
 
-        private void RetryPathWhenAllowed()
+        private void RetryOrReplacePath()
         {
             if (Time.time < nextPathRetryTime)
             {
@@ -185,9 +202,37 @@ namespace PancakeDevs.ApexPhysics
             }
 
             nextPathRetryTime = Time.time + failedPathRetryDelay;
+            if (IsWandering())
+            {
+                ReplaceWanderDestination();
+                return;
+            }
+
             navigator.TryBindToNavMesh();
             navigator.ForceRepath();
             motorBody.WakeUp();
+        }
+
+        private void ReplaceWanderDestination()
+        {
+            if (navigator == null)
+            {
+                return;
+            }
+
+            navigator.ClearDestination();
+            bool foundReplacement = brain != null && brain.PickNewWanderDestination();
+            if (!foundReplacement)
+            {
+                navigator.TryBindToNavMesh();
+            }
+            motorBody?.WakeUp();
+            ResetProgressTracking();
+        }
+
+        private bool IsWandering()
+        {
+            return brain != null && brain.CurrentMode == ApexNPCBehaviorMode.Wander;
         }
 
         private bool IsCharacterControllable()
