@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "displayName": "Apex Physics Engine",
-  "description": "A Unity physics framework with a custom physical OpenXR player rig, Rigidbody locomotion, room-scale body recentering, low-latency force-driven hands, arm reach limits, Apex grabbing, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
+  "description": "A Unity physics framework with a custom physical OpenXR player rig, Humanoid avatar binding, headset-driven body posing, low-latency physical hands, arm reach limits, Rigidbody locomotion, room-scale recentering, Apex grabbing, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9",
@@ -21,6 +21,9 @@
     "vr-player",
     "openxr",
     "physical-vr",
+    "humanoid-avatar",
+    "full-body-avatar",
+    "arm-ik",
     "physical-hands",
     "low-latency-hands",
     "room-scale",
