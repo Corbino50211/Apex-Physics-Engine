@@ -2,6 +2,35 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.3] - 2026-07-28
+
+### Added
+
+- `ApexPCFootPlanting` for alternating world-space planted steps on the hidden Humanoid target.
+- Two-bone leg solving that keeps feet near sampled ground while the motor moves.
+- `ApexPCNavigationDriver` for projecting NavMesh planning beneath the authoritative PC motor.
+- Automatic invalid, partial, and stuck-path retries.
+- `ApexPCRagdollMomentum` for transferring motor linear velocity, angular velocity, and per-bone point velocity into ragdoll.
+- Main PC character inspector diagnostics for foot readiness, NavMesh binding, path status, destination state, and remaining distance.
+
+### Changed
+
+- The procedural gait now receives a grounded foot-planting pass before the visible physical body copies the target pose.
+- Existing Humanoid-root navigation is bridged to the generated `Apex PC Character Motor` instead of relying on the floating hips position.
+- The manual **Knock Down** test now preserves current walking and turning momentum.
+- **Rebuild Selected PC Physical Character** installs the motor fitter, procedural gait, foot planting, navigation bridge, and momentum handoff together.
+
+### Fixed
+
+- NPC feet no longer remain curled upward solely from the procedural leg-swing fallback.
+- NPCs with valid destinations no longer remain asleep indefinitely until struck.
+- Invalid or partial wander paths are retried instead of leaving the brain waiting forever.
+
+### Notes
+
+- Active characters remain kinematic target-followers for stability; planted stepping makes the locomotion pose grounded, but fully force-driven standing legs remain a later milestone.
+- Unity compilation and Play Mode behavior still require validation in the Unity 6.2 Windows test project.
+
 ## [0.3.2] - 2026-07-28
 
 ### Added
