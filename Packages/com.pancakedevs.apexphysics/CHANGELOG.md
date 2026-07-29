@@ -2,6 +2,40 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.5.0] - 2026-07-29
+
+### Added
+
+- `ApexWaterVolume` for logical water bounds, animated surface queries, currents, trigger detection, and generated visual surfaces.
+- `ApexWaterMath` shared four-layer wave sampling mirrored by the included shaders so GPU visuals and CPU physics stay synchronized.
+- `ApexWaterManager` static queries for volume lookup, surface height, underwater state, and currents.
+- `IApexWaterReactive` with per-volume collider reference counting for reliable multi-collider characters, ragdolls, and props.
+- `ApexBuoyantBody` multi-point Rigidbody buoyancy, point damping, water drag, currents, overlapping-volume selection, and collider-based point generation.
+- `ApexSwimmer` input-agnostic Rigidbody swimming with planar movement, ascend/descend, sprinting, surface settling, currents, floor protection, oxygen, and events.
+- Optional `ApexLegacySwimInput` adapter for projects with the Legacy Input Manager enabled.
+- Optional `ApexUnderwaterCameraEffects` for local-camera underwater fog and background color.
+- **Apex Physics Engine > Water** tools for creating a water volume, making selected Rigidbodies buoyant or swimmable, and building an example setup.
+- Saved water surface mesh/material generation under `Assets/Apex Generated/Water/` with rebuild and cleanup actions.
+- Pipeline-lightweight **Apex Physics Engine/Water/Simple** animated transparent water shader.
+- Optional **Apex Water URP Visuals** Package Manager sample with depth color, foam, Fresnel, caustics, and opaque-texture refraction.
+- `Documentation~/water.md` covering setup, APIs, input integration, render-pipeline separation, and current limits.
+
+### Changed
+
+- Package version advanced to `0.5.0` for the Water Foundation milestone.
+- The supplied water package was adapted into the Apex namespace, component/menu conventions, generated-asset workflow, and render-pipeline-independent runtime architecture.
+- Swimming no longer owns a required input implementation; Input System, AI, networking, and future VR code can feed the same public input API.
+- Water rendering properties are applied through `MaterialPropertyBlock` so multiple volumes can share a material without overwriting one another.
+- The advanced URP renderer is optional, and Apex does not silently enable Depth Texture, Opaque Texture, or alter project graphics settings.
+
+### Notes
+
+- Water surfaces are currently horizontal; Y-axis rotation is supported, while X/Z tilt can make physics and visuals disagree.
+- Buoyancy is point-sampled rather than full displaced-volume integration.
+- `ApexUnderwaterCameraEffects` uses global `RenderSettings` fog and should normally be used once for the local camera.
+- Swimming is a generic Rigidbody motor and is not yet an automatic state inside `ApexPCPhysicalCharacter`.
+- Unity compilation, shader rendering, surface generation, buoyancy, and Play Mode swimming still require confirmation in the Unity 6.2 Windows test project.
+
 ## [0.4.1] - 2026-07-29
 
 ### Added
@@ -350,4 +384,4 @@ All notable changes to Apex Physics Engine will be documented here.
 ### Notes
 
 - Existing 0.1.3 NPCs can be repaired in place. Update, exit Play Mode, run **Rebuild and Calibrate Standing Pose**, save the scene, and test again.
-- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 test project before the draft release is merged.
+- Unity compilation and Play Mode tuning still require validation inside the Unity 6.2 Windows test project before the draft release is merged.
