@@ -2,6 +2,63 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.4.0] - 2026-07-29
+
+### Added
+
+- `ApexDestructible` runtime controller for impact-threshold fracture activation.
+- `ApexDestructibleChunk` runtime state for locked and released debris pieces.
+- **Apex Physics Engine > Destruction > Fracture Selected Mesh...** editor workflow.
+- Recursive editor-time plane slicing that clips source triangles into irregular chunks.
+- Generated interior cap polygons with a dedicated interior-material submesh.
+- Repeatable fracture layouts through a configurable random seed.
+- Target chunk count, minimum chunk volume, fracture irregularity, and interior UV scale controls.
+- Generated mesh assets under `Assets/Apex Generated/Destruction/`.
+- Centered chunk pivots, convex `MeshCollider` components, and mass distributed by chunk volume.
+- Partial destruction that reveals the complete fractured object but releases only chunks near the impact point.
+- Secondary impacts that can release additional nearby chunks.
+- Linear velocity, angular velocity, and outward impact impulse transfer into released debris.
+- Optional timed cleanup for released chunks.
+- Inspector buttons for **Break At Center**, **Break All**, rebuild, and generated-fracture cleanup.
+- Automatic intact `MeshCollider`, kinematic `Rigidbody`, `ApexBody`, and `ApexDestructible` setup when missing.
+- `Documentation~/destruction.md` with setup, limitations, and runtime behavior.
+
+### Changed
+
+- Package version advanced to `0.4.0` for the destruction-system milestone.
+- Fracturing remains an editor-authoring operation so gameplay does not pay the cost of remeshing and collider generation.
+
+### Notes
+
+- The first release supports one closed, manifold `MeshFilter` and `MeshRenderer` per destructible object.
+- Open, paper-thin, self-intersecting, or non-manifold meshes may fail to generate valid capped chunks.
+- Complex chunks can exceed Unity convex-collider cooking limits.
+- Runtime slicing, bullet-hole remeshing, networking, and persistent destruction state are later milestones.
+- Unity compilation and full fracture/play-mode validation still require confirmation in the Unity 6.2 Windows test project.
+
+## [0.3.12] - 2026-07-29
+
+### Fixed
+
+- Replaced stacked foot-orientation passes with one final owner.
+- Preserved each avatar's original motor-relative foot rotation before floor alignment.
+- Applied one controlled world-space toe pitch around the motor-right axis.
+
+### Changed
+
+- Final foot orientation no longer requires mapped Humanoid toe bones.
+- Foot positions, colliders, IK targets, and sole clearance remain unchanged.
+
+## [0.3.11] - 2026-07-29
+
+### Added
+
+- Runtime foot-orientation correction for existing and spawned PC physical characters.
+
+### Fixed
+
+- Added motor-forward awareness for avatars whose toe-bone mapping points backward.
+
 ## [0.3.10] - 2026-07-29
 
 ### Fixed
