@@ -2,6 +2,25 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.9] - 2026-07-28
+
+### Added
+
+- Configurable planted toe-up pitch for procedural NPC feet.
+- Extra toe lift through the middle of each procedural step.
+- Automatic migration of existing foot-planter components to the new rotation defaults.
+
+### Changed
+
+- Foot pitch is applied only to the Humanoid foot-bone rotation after the leg solve.
+- Ground targets, sole clearance, planted positions, generated foot colliders, and motor placement remain unchanged.
+
+### Notes
+
+- Existing NPCs should be rebuilt once after updating.
+- The default planted pitch is `7` degrees with up to `8` additional degrees during a step.
+- Unity compilation and Play Mode behavior still require confirmation in the Unity 6.2 Windows test project.
+
 ## [0.3.8] - 2026-07-28
 
 ### Added
