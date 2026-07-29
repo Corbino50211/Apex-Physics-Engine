@@ -28,7 +28,8 @@ namespace PancakeDevs.ApexPhysics.Editor
 
             ApexPCPlayerMotor motor = Undo.AddComponent<ApexPCPlayerMotor>(root);
             ApexPCPlayerLook look = Undo.AddComponent<ApexPCPlayerLook>(root);
-            Undo.AddComponent<ApexPCPlayerInput>(root);
+            ApexPCPlayerInteraction playerInteraction = Undo.AddComponent<ApexPCPlayerInteraction>(root);
+            ApexPCPlayerInput input = Undo.AddComponent<ApexPCPlayerInput>(root);
 
             GameObject cameraPivotObject = new GameObject("Camera Pivot");
             Undo.RegisterCreatedObjectUndo(cameraPivotObject, "Create Apex Camera Pivot");
@@ -48,7 +49,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             Undo.RegisterCreatedObjectUndo(interactionObject, "Create Apex Interaction Origin");
             Transform interaction = interactionObject.transform;
             interaction.SetParent(cameraTransform, false);
-            interaction.localPosition = new Vector3(0f, -0.15f, 0.55f);
+            interaction.localPosition = new Vector3(0f, -0.12f, 1.25f);
             ApexGrabber grabber = Undo.AddComponent<ApexGrabber>(interactionObject);
 
             GameObject groundProbeObject = new GameObject("Ground Probe");
@@ -67,16 +68,26 @@ namespace PancakeDevs.ApexPhysics.Editor
             lookObject.FindProperty("pitchRoot").objectReferenceValue = cameraPivot;
             lookObject.ApplyModifiedPropertiesWithoutUndo();
 
-            ApexPCPlayerInput input = root.GetComponent<ApexPCPlayerInput>();
+            SerializedObject interactionSettings = new SerializedObject(playerInteraction);
+            interactionSettings.FindProperty("viewCamera").objectReferenceValue = camera;
+            interactionSettings.FindProperty("grabber").objectReferenceValue = grabber;
+            interactionSettings.FindProperty("holdTarget").objectReferenceValue = interaction;
+            interactionSettings.FindProperty("playerColliders").arraySize = 1;
+            interactionSettings.FindProperty("playerColliders").GetArrayElementAtIndex(0).objectReferenceValue = capsule;
+            interactionSettings.ApplyModifiedPropertiesWithoutUndo();
+
             SerializedObject inputObject = new SerializedObject(input);
             inputObject.FindProperty("motor").objectReferenceValue = motor;
             inputObject.FindProperty("look").objectReferenceValue = look;
             inputObject.FindProperty("grabber").objectReferenceValue = grabber;
+            inputObject.FindProperty("interaction").objectReferenceValue = playerInteraction;
             inputObject.ApplyModifiedPropertiesWithoutUndo();
 
             Selection.activeGameObject = root;
             EditorSceneManager.MarkSceneDirty(root.scene);
-            Debug.Log("Created Apex PC Player Rig. Controls: WASD, mouse, Space, Shift, E to grab/release, Escape to unlock cursor.", root);
+            Debug.Log(
+                "Created Apex PC Player Rig. Controls: WASD, mouse, Space, Shift, E grab/release, mouse wheel hold distance, left click throw, Escape unlock cursor.",
+                root);
         }
 
         private static Vector3 FindSpawnPosition()
