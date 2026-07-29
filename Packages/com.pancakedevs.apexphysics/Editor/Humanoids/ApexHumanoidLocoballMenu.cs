@@ -63,9 +63,22 @@ namespace PancakeDevs.ApexPhysics.Editor
             fitter.Configure(humanoid);
             fitter.FitNow();
 
+            // Installs and serializes the current PC-first support stack:
+            // procedural gait, planted feet, motor navigation, and ragdoll momentum.
+            humanoid.EnsurePCPhysicalCharacter();
+
             EditorUtility.SetDirty(humanoid);
             EditorUtility.SetDirty(character);
             EditorUtility.SetDirty(fitter);
+
+            Component[] generatedModules = humanoid.GetComponents<Component>();
+            for (int i = 0; i < generatedModules.Length; i++)
+            {
+                if (generatedModules[i] != null)
+                {
+                    EditorUtility.SetDirty(generatedModules[i]);
+                }
+            }
 
             if (humanoid.gameObject.scene.IsValid())
             {
