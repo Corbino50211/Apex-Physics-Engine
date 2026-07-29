@@ -4,8 +4,8 @@ namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
     /// Selects how an automatically converted humanoid is configured.
-    /// Kept beside ApexPhysicalHumanoid so Unity cannot partially import the component
-    /// while omitting its required mode type from a Git package refresh.
+    /// PhysicalPlayer is retained for old serialized content; the 0.3.x authoring
+    /// workflow is PC Physical NPC only until the desktop character system is stable.
     /// </summary>
     public enum ApexPhysicalHumanoidMode
     {
@@ -16,7 +16,8 @@ namespace PancakeDevs.ApexPhysics
 
     /// <summary>
     /// Stores the generated pieces of an Apex physical humanoid conversion.
-    /// The animated target drives a visible physical clone through ApexActiveRagdoll.
+    /// The animated target drives a visible physical clone. Physical NPCs are now
+    /// coordinated through one ApexPCPhysicalCharacter component.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ApexPhysicalHumanoid : MonoBehaviour
@@ -30,19 +31,20 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private Transform targetHips;
         [SerializeField] private ApexRagdollBone physicalHips;
 
-        [Header("Apex Systems")]
+        [Header("PC Character System")]
+        [SerializeField] private ApexPCPhysicalCharacter pcPhysicalCharacter;
+
+        [Header("Legacy Apex Systems")]
         [SerializeField] private ApexActiveRagdoll activeRagdoll;
         [SerializeField] private ApexHumanoidTargetRootDriver targetRootDriver;
         [SerializeField] private ApexHumanoidTrackingDriver trackingDriver;
         [SerializeField] private ApexRagdollCollisionFilter collisionFilter;
         [SerializeField] private ApexHumanoidSupportRig supportRig;
         [SerializeField] private ApexHumanoidPhysicalController physicalController;
-
-        [Header("Legacy Support Add-ons")]
         [SerializeField] private ApexHumanoidLocoballRig locoballRig;
         [SerializeField] private ApexHumanoidTorsoHarness torsoHarness;
 
-        [Header("Player and NPC Systems")]
+        [Header("Legacy Player and NPC Systems")]
         [SerializeField] private ApexHumanoidPlayerMotor humanoidPlayerMotor;
         [SerializeField] private ApexPhysicalPlayerRig legacyPlayerRig;
         [SerializeField] private ApexNPCNavigator npcNavigator;
@@ -55,6 +57,7 @@ namespace PancakeDevs.ApexPhysics
         public Animator TargetAnimator => targetAnimator;
         public Transform TargetHips => targetHips;
         public ApexRagdollBone PhysicalHips => physicalHips;
+        public ApexPCPhysicalCharacter PCPhysicalCharacter => pcPhysicalCharacter;
         public ApexActiveRagdoll ActiveRagdoll => activeRagdoll;
         public ApexHumanoidTargetRootDriver TargetRootDriver => targetRootDriver;
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
@@ -73,9 +76,7 @@ namespace PancakeDevs.ApexPhysics
         {
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
-                TunePhysicalNpcMuscles();
-                EnsureSupportRig();
-                EnsurePhysicalController();
+                EnsurePCPhysicalCharacter();
             }
         }
 
@@ -113,12 +114,35 @@ namespace PancakeDevs.ApexPhysics
 
             if (mode == ApexPhysicalHumanoidMode.PhysicalNPC)
             {
-                TunePhysicalNpcMuscles();
-                EnsureSupportRig();
-                EnsurePhysicalController();
+                EnsurePCPhysicalCharacter();
             }
         }
 
+        public ApexPCPhysicalCharacter EnsurePCPhysicalCharacter()
+        {
+            if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
+            {
+                return pcPhysicalCharacter;
+            }
+
+            if (pcPhysicalCharacter == null)
+            {
+                pcPhysicalCharacter = GetComponent<ApexPCPhysicalCharacter>();
+            }
+
+            if (pcPhysicalCharacter == null)
+            {
+                pcPhysicalCharacter = gameObject.AddComponent<ApexPCPhysicalCharacter>();
+            }
+
+            pcPhysicalCharacter.Configure(this);
+            return pcPhysicalCharacter;
+        }
+
+        /// <summary>
+        /// Legacy 0.1/0.2 support component retained so older prefabs can deserialize.
+        /// New 0.3.x PC characters do not use it for active locomotion.
+        /// </summary>
         public ApexHumanoidSupportRig EnsureSupportRig()
         {
             if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
@@ -140,6 +164,9 @@ namespace PancakeDevs.ApexPhysics
             return supportRig;
         }
 
+        /// <summary>
+        /// Legacy 0.2 controller retained for serialized compatibility.
+        /// </summary>
         public ApexHumanoidPhysicalController EnsurePhysicalController()
         {
             if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
@@ -162,15 +189,10 @@ namespace PancakeDevs.ApexPhysics
                 physicalController = gameObject.AddComponent<ApexHumanoidPhysicalController>();
             }
 
-            DisableLegacySupportAddons();
             physicalController.Configure(this);
             return physicalController;
         }
 
-        /// <summary>
-        /// Retained only so older serialized prefabs can still deserialize. New physical
-        /// NPCs do not install or use the locoball foot-tether system.
-        /// </summary>
         public ApexHumanoidLocoballRig EnsureLocoballRig()
         {
             if (locoballRig == null)
@@ -181,10 +203,6 @@ namespace PancakeDevs.ApexPhysics
             return locoballRig;
         }
 
-        /// <summary>
-        /// Retained only so older serialized prefabs can still deserialize. New physical
-        /// NPCs use target-driven spine muscles instead of a separate chest spring.
-        /// </summary>
         public ApexHumanoidTorsoHarness EnsureTorsoHarness()
         {
             if (torsoHarness == null)
@@ -213,20 +231,12 @@ namespace PancakeDevs.ApexPhysics
             SetBoneMuscle(animator, HumanBodyBones.UpperChest, 1.65f);
             SetBoneMuscle(animator, HumanBodyBones.Neck, 1.15f);
             SetBoneMuscle(animator, HumanBodyBones.Head, 1.05f);
-
             SetBoneMuscle(animator, HumanBodyBones.LeftUpperLeg, 1.45f);
             SetBoneMuscle(animator, HumanBodyBones.RightUpperLeg, 1.45f);
             SetBoneMuscle(animator, HumanBodyBones.LeftLowerLeg, 1.35f);
             SetBoneMuscle(animator, HumanBodyBones.RightLowerLeg, 1.35f);
             SetBoneMuscle(animator, HumanBodyBones.LeftFoot, 1.1f);
             SetBoneMuscle(animator, HumanBodyBones.RightFoot, 1.1f);
-
-            SetBoneMuscle(animator, HumanBodyBones.LeftShoulder, 1f);
-            SetBoneMuscle(animator, HumanBodyBones.RightShoulder, 1f);
-            SetBoneMuscle(animator, HumanBodyBones.LeftUpperArm, 0.9f);
-            SetBoneMuscle(animator, HumanBodyBones.RightUpperArm, 0.9f);
-            SetBoneMuscle(animator, HumanBodyBones.LeftLowerArm, 0.85f);
-            SetBoneMuscle(animator, HumanBodyBones.RightLowerArm, 0.85f);
         }
 
         private static void SetBoneMuscle(Animator animator, HumanBodyBones role, float multiplier)
@@ -239,27 +249,6 @@ namespace PancakeDevs.ApexPhysics
 
             ApexRagdollBone ragdollBone = bone.GetComponent<ApexRagdollBone>();
             ragdollBone?.SetMuscleMultiplier(multiplier);
-        }
-
-        private void DisableLegacySupportAddons()
-        {
-            locoballRig = GetComponent<ApexHumanoidLocoballRig>();
-            if (locoballRig != null)
-            {
-                locoballRig.enabled = false;
-            }
-
-            torsoHarness = GetComponent<ApexHumanoidTorsoHarness>();
-            if (torsoHarness != null)
-            {
-                torsoHarness.enabled = false;
-            }
-
-            ApexHumanoidFootTether[] tethers = GetComponentsInChildren<ApexHumanoidFootTether>(true);
-            for (int i = 0; i < tethers.Length; i++)
-            {
-                tethers[i]?.SetTetherActive(false);
-            }
         }
     }
 }
