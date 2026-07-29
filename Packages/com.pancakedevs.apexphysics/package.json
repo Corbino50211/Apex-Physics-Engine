@@ -1,6 +1,6 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "displayName": "Apex Physics Engine",
   "description": "A Unity physics framework with a custom physical OpenXR player rig, Humanoid avatar binding registered through the main VR menu, headset-driven body posing, stabilized physical VR grabbing, low-latency physical hands, arm reach limits, Rigidbody locomotion, room-scale recentering, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
   "unity": "6000.0",
