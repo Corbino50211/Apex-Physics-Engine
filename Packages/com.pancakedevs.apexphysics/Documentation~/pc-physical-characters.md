@@ -60,4 +60,4 @@ The repair command removes the experimental locoball, foot-tether, torso-harness
 
 ## Current limitation
 
-The Active state uses exact animated pose following for stability. Fully force-reactive standing muscles will be reintroduced only after locomotion, impacts, ragdoll, and recovery work reliably across multiple Humanoid models.
+The Active state uses exact animated pose following for stability. Fully force-reactive standing muscles will be reintroduced only after locomotion, impacts, ragdoll, and recovery work reliably across multiple Humanoid models. VR support comes after this PC milestone.
