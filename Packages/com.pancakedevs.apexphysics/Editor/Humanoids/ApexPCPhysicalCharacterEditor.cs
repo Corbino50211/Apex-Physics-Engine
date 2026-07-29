@@ -91,12 +91,15 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorGUILayout.EnumPopup("State", character.State);
             EditorGUILayout.Toggle("Grounded", character.Grounded);
 
+            DrawLocomotionDiagnostics(character);
+
             if (!Application.isPlaying)
             {
                 if (GUILayout.Button("Rebuild PC Physical Character", GUILayout.Height(34f)))
                 {
                     Undo.RecordObject(character, "Rebuild Apex PC Physical Character");
                     character.Rebuild();
+                    character.Humanoid?.EnsurePCPhysicalCharacter();
                     EditorUtility.SetDirty(character);
                 }
 
@@ -123,7 +126,7 @@ namespace PancakeDevs.ApexPhysics.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Knock Down"))
+                if (GUILayout.Button("Knock Down (Keep Momentum)"))
                 {
                     character.KnockDown();
                 }
@@ -140,6 +143,48 @@ namespace PancakeDevs.ApexPhysics.Editor
             }
 
             Repaint();
+        }
+
+        private static void DrawLocomotionDiagnostics(ApexPCPhysicalCharacter character)
+        {
+            ApexPhysicalHumanoid humanoid = character.Humanoid;
+            if (humanoid == null)
+            {
+                return;
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Grounded Locomotion", EditorStyles.boldLabel);
+            EditorGUILayout.ObjectField(
+                "Foot Planting",
+                humanoid.PCFootPlanting,
+                typeof(ApexPCFootPlanting),
+                true);
+            EditorGUILayout.Toggle(
+                "Feet Ready",
+                humanoid.PCFootPlanting != null && humanoid.PCFootPlanting.IsReady);
+            EditorGUILayout.ObjectField(
+                "Navigation Bridge",
+                humanoid.PCNavigationDriver,
+                typeof(ApexPCNavigationDriver),
+                true);
+            EditorGUILayout.ObjectField(
+                "Momentum Handoff",
+                humanoid.PCRagdollMomentum,
+                typeof(ApexPCRagdollMomentum),
+                true);
+
+            ApexNPCNavigator navigator = humanoid.NPCNavigator;
+            if (navigator == null)
+            {
+                return;
+            }
+
+            EditorGUILayout.Toggle("On NavMesh", navigator.IsOnNavMesh);
+            EditorGUILayout.Toggle("Has Destination", navigator.HasDestination);
+            EditorGUILayout.Toggle("Has Complete Path", navigator.HasCompletePath);
+            EditorGUILayout.EnumPopup("Path Status", navigator.PathStatus);
+            EditorGUILayout.FloatField("Remaining Distance", navigator.RemainingDistance);
         }
 
         private void DrawProperty(string propertyName)
