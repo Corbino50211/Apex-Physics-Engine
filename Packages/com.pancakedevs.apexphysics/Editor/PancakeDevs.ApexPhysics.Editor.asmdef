@@ -1,0 +1,19 @@
+{
+  "name": "PancakeDevs.ApexPhysics.Editor",
+  "rootNamespace": "PancakeDevs.ApexPhysics.Editor",
+  "references": [
+    "PancakeDevs.ApexPhysics.Runtime",
+    "Unity.AI.Navigation"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

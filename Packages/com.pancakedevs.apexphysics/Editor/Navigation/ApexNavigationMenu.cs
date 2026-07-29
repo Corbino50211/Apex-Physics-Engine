@@ -1,0 +1,100 @@
+using PancakeDevs.ApexPhysics;
+using Unity.AI.Navigation;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.AI;
+
+namespace PancakeDevs.ApexPhysics.Editor
+{
+    internal static class ApexNavigationMenu
+    {
+        private const string CreateSurfacePath = "Apex Physics Engine/Navigation/Create Navigation Surface";
+        private const string MakeNavigatorPath = "Apex Physics Engine/Navigation/Make Selected Object a Basic NPC";
+
+        [MenuItem(CreateSurfacePath, false, 30)]
+        private static void CreateNavigationSurface()
+        {
+            GameObject navigationObject = new GameObject("Apex Navigation Surface");
+            Undo.RegisterCreatedObjectUndo(navigationObject, "Create Apex Navigation Surface");
+
+            Undo.AddComponent<NavMeshSurface>(navigationObject);
+            Undo.AddComponent<ApexNavMeshAutoBaker>(navigationObject);
+
+            GameObject parent = Selection.activeGameObject;
+            if (parent != null)
+            {
+                Undo.SetTransformParent(
+                    navigationObject.transform,
+                    parent.transform,
+                    "Parent Apex Navigation Surface");
+            }
+
+            Selection.activeGameObject = navigationObject;
+            EditorGUIUtility.PingObject(navigationObject);
+        }
+
+        [MenuItem(MakeNavigatorPath, false, 31)]
+        private static void MakeSelectedObjectNavigator()
+        {
+            GameObject selected = Selection.activeGameObject;
+            if (selected == null)
+            {
+                return;
+            }
+
+            Undo.SetCurrentGroupName("Make Apex Basic NPC");
+            int undoGroup = Undo.GetCurrentGroup();
+
+            if (selected.GetComponentInChildren<Collider>() == null)
+            {
+                Undo.AddComponent<CapsuleCollider>(selected);
+            }
+
+            Rigidbody rigidbody = selected.GetComponent<Rigidbody>();
+            if (rigidbody == null)
+            {
+                rigidbody = Undo.AddComponent<Rigidbody>(selected);
+            }
+
+            if (selected.GetComponent<ApexBody>() == null)
+            {
+                Undo.AddComponent<ApexBody>(selected);
+            }
+
+            if (selected.GetComponent<NavMeshAgent>() == null)
+            {
+                Undo.AddComponent<NavMeshAgent>(selected);
+            }
+
+            if (selected.GetComponent<ApexNPCNavigator>() == null)
+            {
+                Undo.AddComponent<ApexNPCNavigator>(selected);
+            }
+
+            if (selected.GetComponent<ApexNPCMotor>() == null)
+            {
+                Undo.AddComponent<ApexNPCMotor>(selected);
+            }
+
+            if (selected.GetComponent<ApexNPCBrain>() == null)
+            {
+                Undo.AddComponent<ApexNPCBrain>(selected);
+            }
+
+            Undo.RecordObject(rigidbody, "Configure Apex NPC Rigidbody");
+            rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+            rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rigidbody.WakeUp();
+
+            Undo.CollapseUndoOperations(undoGroup);
+            EditorUtility.SetDirty(selected);
+            Selection.activeGameObject = selected;
+        }
+
+        [MenuItem(MakeNavigatorPath, true)]
+        private static bool ValidateMakeSelectedObjectNavigator()
+        {
+            return Selection.activeGameObject != null;
+        }
+    }
+}
