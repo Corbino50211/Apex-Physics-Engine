@@ -6,7 +6,7 @@ namespace PancakeDevs.ApexPhysics
     /// Keeps the hidden animated target skeleton aligned with a physical root while
     /// preserving the Humanoid hips bone's authored position and rotation offsets.
     /// </summary>
-    [DefaultExecutionOrder(900)]
+    [DefaultExecutionOrder(-300)]
     [DisallowMultipleComponent]
     public sealed class ApexHumanoidTargetRootDriver : MonoBehaviour
     {
@@ -42,8 +42,6 @@ namespace PancakeDevs.ApexPhysics
 
             if (preserveCurrentOffset)
             {
-                // Rebuilding or recovering the same rig must not capture the temporary
-                // ragdoll separation as a new standing offset.
                 if (!sameRelationship || !offsetCaptured)
                 {
                     CaptureCurrentOffset();
@@ -59,11 +57,6 @@ namespace PancakeDevs.ApexPhysics
             SnapNow();
         }
 
-        /// <summary>
-        /// Captures the target root's current pose relative to the physical root.
-        /// Humanoid hips commonly have a non-identity authored rotation, so this
-        /// offset must be retained instead of forcing both transforms to match.
-        /// </summary>
         public void CaptureCurrentOffset()
         {
             if (physicalRoot == null || targetRoot == null)
