@@ -19,6 +19,7 @@ The builder creates one user-facing `ApexPCPhysicalCharacter` component. Generat
 - NavMesh path planning and NPC behavior.
 - Impact-triggered ragdoll release.
 - Front/back get-up trigger support and fallback pose blending.
+- A procedural Humanoid gait when no Animator Controller is assigned.
 
 ## Runtime states
 
@@ -32,7 +33,7 @@ The character temporarily moves at reduced authority without entering a full rag
 
 ### Ragdoll
 
-A sufficiently hard external impact disables the capsule collision and switches every generated bone Rigidbody to dynamic simulation.
+A sufficiently hard impact disables the capsule collision and switches every generated bone Rigidbody to dynamic simulation. Generated ragdoll self-collisions are disabled by default to prevent automatically fitted colliders from exploding apart.
 
 ### Getting Up
 
@@ -47,7 +48,7 @@ The motor is repositioned beneath the fallen hips. The controller triggers `GetU
 - `GetUpFront` — Trigger
 - `GetUpBack` — Trigger
 
-The character still recovers without authored get-up clips, but an Animator Controller is required for a real get-up animation.
+The character still recovers without authored get-up clips, but an Animator Controller is required for a real get-up animation. Without an Animator Controller, Apex uses its procedural walking fallback while the NPC moves.
 
 ## Upgrade an older generated NPC
 
