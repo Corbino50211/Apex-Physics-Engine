@@ -17,7 +17,8 @@ namespace PancakeDevs.ApexPhysics
     /// <summary>
     /// Stores the generated pieces of an Apex physical humanoid conversion.
     /// The animated target drives a visible physical clone. Physical NPCs are now
-    /// coordinated through one ApexPCPhysicalCharacter component.
+    /// coordinated through one ApexPCPhysicalCharacter component and its generated
+    /// PC-only support modules.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ApexPhysicalHumanoid : MonoBehaviour
@@ -34,6 +35,9 @@ namespace PancakeDevs.ApexPhysics
         [Header("PC Character System")]
         [SerializeField] private ApexPCPhysicalCharacter pcPhysicalCharacter;
         [SerializeField] private ApexPCProceduralGait pcProceduralGait;
+        [SerializeField] private ApexPCFootPlanting pcFootPlanting;
+        [SerializeField] private ApexPCNavigationDriver pcNavigationDriver;
+        [SerializeField] private ApexPCRagdollMomentum pcRagdollMomentum;
 
         [Header("Legacy Apex Systems")]
         [SerializeField] private ApexActiveRagdoll activeRagdoll;
@@ -60,6 +64,9 @@ namespace PancakeDevs.ApexPhysics
         public ApexRagdollBone PhysicalHips => physicalHips;
         public ApexPCPhysicalCharacter PCPhysicalCharacter => pcPhysicalCharacter;
         public ApexPCProceduralGait PCProceduralGait => pcProceduralGait;
+        public ApexPCFootPlanting PCFootPlanting => pcFootPlanting;
+        public ApexPCNavigationDriver PCNavigationDriver => pcNavigationDriver;
+        public ApexPCRagdollMomentum PCRagdollMomentum => pcRagdollMomentum;
         public ApexActiveRagdoll ActiveRagdoll => activeRagdoll;
         public ApexHumanoidTargetRootDriver TargetRootDriver => targetRootDriver;
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
@@ -155,6 +162,42 @@ namespace PancakeDevs.ApexPhysics
             }
 
             pcProceduralGait.Configure(pcPhysicalCharacter);
+
+            if (pcFootPlanting == null)
+            {
+                pcFootPlanting = GetComponent<ApexPCFootPlanting>();
+            }
+
+            if (pcFootPlanting == null)
+            {
+                pcFootPlanting = gameObject.AddComponent<ApexPCFootPlanting>();
+            }
+
+            pcFootPlanting.Configure(pcPhysicalCharacter);
+
+            if (pcNavigationDriver == null)
+            {
+                pcNavigationDriver = GetComponent<ApexPCNavigationDriver>();
+            }
+
+            if (pcNavigationDriver == null)
+            {
+                pcNavigationDriver = gameObject.AddComponent<ApexPCNavigationDriver>();
+            }
+
+            pcNavigationDriver.Configure(pcPhysicalCharacter);
+
+            if (pcRagdollMomentum == null)
+            {
+                pcRagdollMomentum = GetComponent<ApexPCRagdollMomentum>();
+            }
+
+            if (pcRagdollMomentum == null)
+            {
+                pcRagdollMomentum = gameObject.AddComponent<ApexPCRagdollMomentum>();
+            }
+
+            pcRagdollMomentum.Configure(pcPhysicalCharacter);
             return pcPhysicalCharacter;
         }
 
