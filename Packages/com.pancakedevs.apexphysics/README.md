@@ -4,7 +4,7 @@ A PC-first modular Unity physics framework from PancakeDevs for physical charact
 
 ## Current package version
 
-`0.4.0`
+`0.4.1`
 
 ## Included systems
 
@@ -14,7 +14,9 @@ A PC-first modular Unity physics framework from PancakeDevs for physical charact
 - automatic NavMesh baking and Idle/Wander/Chase NPC behavior
 - barcode-driven crates, pallets, spawners, and Void previews
 - editor-generated destructible mesh chunks with interior cap polygons
-- partial impact breakage, secondary chunk release, and momentum-preserving debris
+- manual-only or impact-threshold runtime fracture activation
+- collision-impulse or estimated-force threshold measurement
+- partial breakage, secondary chunk release, and momentum-preserving debris
 - automatic lighting workflows and in-editor package updates
 
 ## Destruction quick start
@@ -24,7 +26,9 @@ A PC-first modular Unity physics framework from PancakeDevs for physical charact
 3. Choose **Apex Physics Engine > Destruction > Fracture Selected Mesh...**.
 4. Choose the chunk count and optional interior material.
 5. Click **Generate / Rebuild Fracture**.
+6. On `ApexDestructible`, choose **Manual Only** or **Impact Threshold**.
+7. For automatic breakage, choose **Collision Impulse** or **Estimated Force** and set **Break Threshold**.
 
-Generated mesh assets are stored under `Assets/Apex Generated/Destruction/`. See `Documentation~/destruction.md` for supported geometry and current limitations.
+Generated mesh assets are stored under `Assets/Apex Generated/Destruction/`. Mesh slicing remains editor-time, while the pre-generated chunks can activate automatically from force during Play Mode. See `Documentation~/destruction.md` for supported geometry and current limitations.
 
 Use the **Apex Physics Engine** menu in Unity's top bar for all setup tools.
