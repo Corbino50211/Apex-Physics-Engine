@@ -127,6 +127,11 @@ namespace PancakeDevs.ApexPhysics
                 return pcPhysicalCharacter;
             }
 
+            if (collisionFilter != null)
+            {
+                collisionFilter.SetIgnoreAllSelfCollisions(true);
+            }
+
             if (pcPhysicalCharacter == null)
             {
                 pcPhysicalCharacter = GetComponent<ApexPCPhysicalCharacter>();
@@ -153,10 +158,6 @@ namespace PancakeDevs.ApexPhysics
             return pcPhysicalCharacter;
         }
 
-        /// <summary>
-        /// Legacy 0.1/0.2 support component retained so older prefabs can deserialize.
-        /// New 0.3.x PC characters do not use it for active locomotion.
-        /// </summary>
         public ApexHumanoidSupportRig EnsureSupportRig()
         {
             if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
@@ -178,9 +179,6 @@ namespace PancakeDevs.ApexPhysics
             return supportRig;
         }
 
-        /// <summary>
-        /// Legacy 0.2 controller retained for serialized compatibility.
-        /// </summary>
         public ApexHumanoidPhysicalController EnsurePhysicalController()
         {
             if (mode != ApexPhysicalHumanoidMode.PhysicalNPC)
