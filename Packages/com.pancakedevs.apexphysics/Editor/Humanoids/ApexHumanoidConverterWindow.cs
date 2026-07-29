@@ -5,15 +5,30 @@ using UnityEngine;
 namespace PancakeDevs.ApexPhysics.Editor
 {
     /// <summary>
-    /// Legacy humanoid conversion window retained for project compatibility.
-    /// It is intentionally no longer exposed through the Apex menu because the
-    /// current desktop workflow uses ApexPCPlayerMotor and ApexPCPlayerInteraction.
+    /// Builder for the current Apex physical NPC system.
+    /// The old generic PC physical-character window menu remains hidden, while the
+    /// selected-Humanoid NPC workflow stays available from the Characters menu.
     /// </summary>
     public sealed class ApexHumanoidConverterWindow : EditorWindow
     {
+        private const string MenuRoot = "Apex Physics Engine/Characters/";
+
         [SerializeField] private GameObject character;
         [SerializeField] private bool saveAsPrefab = true;
         [SerializeField] private bool createSpawnableCrate;
+
+        [MenuItem(MenuRoot + "Build Selected Humanoid as PC Physical NPC", false, 6)]
+        private static void BuildSelectedPcNpc()
+        {
+            BuildSelection(true, false);
+        }
+
+        [MenuItem(MenuRoot + "Build Selected Humanoid as PC Physical NPC", true)]
+        private static bool ValidateBuildSelectedPcNpc()
+        {
+            return Selection.activeObject is GameObject candidate &&
+                   ApexHumanoidConverter.CanConvert(candidate, out _);
+        }
 
         private void OnSelectionChange()
         {
@@ -26,11 +41,11 @@ namespace PancakeDevs.ApexPhysics.Editor
 
         private void OnGUI()
         {
-            EditorGUILayout.LabelField("Legacy Apex Physical NPC Builder", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Apex PC Physical NPC", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "This converter is retained only so older projects and editor references remain valid. " +
-                "Use Apex Physics Engine > Player > Create PC Player Rig for the current playable desktop rig.",
-                MessageType.Warning);
+                "Creates the current Apex physical NPC with a capsule motor, hidden animated target, " +
+                "visible physical body, navigation, impact ragdoll, and get-up recovery.",
+                MessageType.Info);
 
             EditorGUILayout.Space();
             character = (GameObject)EditorGUILayout.ObjectField(
@@ -57,12 +72,12 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorGUILayout.Space();
             bool valid = ApexHumanoidConverter.CanConvert(character, out string reason);
             EditorGUILayout.HelpBox(
-                valid ? "Legacy humanoid validation passed." : reason,
+                valid ? "Humanoid validation passed." : reason,
                 valid ? MessageType.Info : MessageType.Warning);
 
             using (new EditorGUI.DisabledScope(!valid))
             {
-                if (GUILayout.Button("Build Legacy Physical NPC", GUILayout.Height(36f)))
+                if (GUILayout.Button("Build PC Physical NPC", GUILayout.Height(42f)))
                 {
                     ApexPhysicalHumanoid converted = ApexHumanoidConverter.Convert(
                         character,
@@ -76,6 +91,21 @@ namespace PancakeDevs.ApexPhysics.Editor
                         character = converted.gameObject;
                     }
                 }
+            }
+        }
+
+        private static void BuildSelection(bool saveAsPrefab, bool createCrate)
+        {
+            GameObject selected = Selection.activeObject as GameObject;
+            ApexPhysicalHumanoid converted = ApexHumanoidConverter.Convert(
+                selected,
+                ApexPhysicalHumanoidMode.PhysicalNPC,
+                saveAsPrefab,
+                createCrate);
+            if (converted != null)
+            {
+                converted.EnsurePCPhysicalCharacter();
+                EnsureMotorFitter(converted);
             }
         }
 
