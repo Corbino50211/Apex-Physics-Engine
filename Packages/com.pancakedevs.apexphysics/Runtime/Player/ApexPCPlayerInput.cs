@@ -7,8 +7,8 @@ using UnityEngine.InputSystem;
 namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
-    /// Optional New Input System desktop adapter for ApexPCPlayerMotor and ApexPCPlayerLook.
-    /// The motor and look controller remain input-agnostic.
+    /// Optional New Input System desktop adapter for the Apex PC player rig.
+    /// The motor, look controller, and interaction layer remain input-agnostic.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ApexPCPlayerInput : MonoBehaviour
@@ -16,6 +16,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private ApexPCPlayerMotor motor;
         [SerializeField] private ApexPCPlayerLook look;
         [SerializeField] private ApexGrabber grabber;
+        [SerializeField] private ApexPCPlayerInteraction interaction;
         [SerializeField] private bool escapeUnlocksCursor = true;
 
         private bool warnedMissingInputSystem;
@@ -25,6 +26,7 @@ namespace PancakeDevs.ApexPhysics
             motor = GetComponent<ApexPCPlayerMotor>();
             look = GetComponent<ApexPCPlayerLook>();
             grabber = GetComponentInChildren<ApexGrabber>(true);
+            interaction = GetComponent<ApexPCPlayerInteraction>();
         }
 
         private void Awake()
@@ -37,6 +39,16 @@ namespace PancakeDevs.ApexPhysics
             if (look == null)
             {
                 look = GetComponent<ApexPCPlayerLook>();
+            }
+
+            if (grabber == null)
+            {
+                grabber = GetComponentInChildren<ApexGrabber>(true);
+            }
+
+            if (interaction == null)
+            {
+                interaction = GetComponent<ApexPCPlayerInteraction>();
             }
         }
 
@@ -73,21 +85,41 @@ namespace PancakeDevs.ApexPhysics
                     ? mouse.delta.ReadValue()
                     : Vector2.zero);
 
-                if (mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked)
+                if (Cursor.lockState == CursorLockMode.Locked)
+                {
+                    float scroll = mouse.scroll.ReadValue().y;
+                    if (Mathf.Abs(scroll) > Mathf.Epsilon)
+                    {
+                        interaction?.AdjustHoldDistance(scroll > 0f ? 1f : -1f);
+                    }
+
+                    if (mouse.leftButton.wasPressedThisFrame)
+                    {
+                        interaction?.ThrowHeld();
+                    }
+                }
+                else if (mouse.leftButton.wasPressedThisFrame)
                 {
                     look?.SetCursorLocked(true);
                 }
             }
 
-            if (keyboard.eKey.wasPressedThisFrame && grabber != null)
+            if (keyboard.eKey.wasPressedThisFrame)
             {
-                if (grabber.IsHolding)
+                if (interaction != null)
                 {
-                    grabber.Release();
+                    interaction.TryInteract();
                 }
-                else
+                else if (grabber != null)
                 {
-                    grabber.TryGrabClosest();
+                    if (grabber.IsHolding)
+                    {
+                        grabber.Release();
+                    }
+                    else
+                    {
+                        grabber.TryGrabClosest();
+                    }
                 }
             }
 
@@ -102,7 +134,7 @@ namespace PancakeDevs.ApexPhysics
             {
                 warnedMissingInputSystem = true;
                 Debug.LogWarning(
-                    "ApexPCPlayerInput requires the Unity Input System. The player motor can still be driven through its public input methods.",
+                    "ApexPCPlayerInput requires the Unity Input System. The player rig can still be driven through its public input methods.",
                     this);
             }
 #endif
