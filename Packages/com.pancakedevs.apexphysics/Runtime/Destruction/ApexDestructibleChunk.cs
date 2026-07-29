@@ -68,6 +68,7 @@ namespace PancakeDevs.ApexPhysics
             if (chunkBody != null)
             {
                 chunkBody.isKinematic = true;
+                chunkBody.useGravity = false;
                 chunkBody.detectCollisions = false;
                 chunkBody.velocity = Vector3.zero;
                 chunkBody.angularVelocity = Vector3.zero;
@@ -97,6 +98,7 @@ namespace PancakeDevs.ApexPhysics
             if (chunkBody != null && !released)
             {
                 chunkBody.isKinematic = true;
+                chunkBody.useGravity = false;
                 chunkBody.detectCollisions = true;
             }
         }
@@ -119,6 +121,7 @@ namespace PancakeDevs.ApexPhysics
             if (chunkBody != null)
             {
                 chunkBody.isKinematic = false;
+                chunkBody.useGravity = true;
                 chunkBody.detectCollisions = true;
                 chunkBody.velocity = inheritedVelocity;
                 chunkBody.angularVelocity = inheritedAngularVelocity;
