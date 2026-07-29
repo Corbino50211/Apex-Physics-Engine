@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -48,6 +47,8 @@ namespace PancakeDevs.ApexPhysics.Editor
         internal const string UpdateBranch = "agent/apex-foundation";
 
         private const string Repository = "Corbino50211/Apex-Physics-Engine";
+        private const string PackageAssetPath =
+            "Packages/com.pancakedevs.apexphysics/package.json";
         private const string PackagePath = "/Packages/com.pancakedevs.apexphysics";
         private const string PackageGitUrl =
             "https://github.com/Corbino50211/Apex-Physics-Engine.git?path=" + PackagePath;
@@ -158,8 +159,17 @@ namespace PancakeDevs.ApexPhysics.Editor
                 ApexPackageUpdateStatus.Installing,
                 $"Installing Apex Physics Engine {LatestVersion} through Package Manager...");
 
-            addRequest = Client.Add(LatestPackageUrl);
-            EditorApplication.update += PollAddRequest;
+            try
+            {
+                addRequest = Client.Add(LatestPackageUrl);
+                EditorApplication.update += PollAddRequest;
+            }
+            catch (Exception exception)
+            {
+                SessionState.EraseString(PendingVersionKey);
+                addRequest = null;
+                Fail("Apex could not start the Package Manager update: " + exception.Message);
+            }
         }
 
         internal static void ForceReinstallLatest()
@@ -198,9 +208,10 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorApplication.update -= PollManifestRequest;
             if (!RequestSucceeded(manifestRequest))
             {
-                Fail($"Update check failed while reading package.json: {BuildRequestError(manifestRequest)}");
+                string error = BuildRequestError(manifestRequest);
                 manifestRequest.Dispose();
                 manifestRequest = null;
+                Fail("Update check failed while reading package.json: " + error);
                 return;
             }
 
@@ -244,9 +255,10 @@ namespace PancakeDevs.ApexPhysics.Editor
             EditorApplication.update -= PollBranchRequest;
             if (!RequestSucceeded(branchRequest))
             {
-                Fail($"Update check failed while reading the release revision: {BuildRequestError(branchRequest)}");
+                string error = BuildRequestError(branchRequest);
                 branchRequest.Dispose();
                 branchRequest = null;
+                Fail("Update check failed while reading the release revision: " + error);
                 return;
             }
 
@@ -367,8 +379,7 @@ namespace PancakeDevs.ApexPhysics.Editor
 
         private static string ResolveInstalledVersion()
         {
-            Assembly assembly = typeof(ApexPackageUpdater).Assembly;
-            PackageInfo package = PackageInfo.FindForAssembly(assembly);
+            PackageInfo package = PackageInfo.FindForAssetPath(PackageAssetPath);
             return package != null && !string.IsNullOrWhiteSpace(package.version)
                 ? package.version
                 : "0.0.0";
