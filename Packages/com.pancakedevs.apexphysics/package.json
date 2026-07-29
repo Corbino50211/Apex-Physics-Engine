@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.3.12",
+  "version": "0.4.0",
   "displayName": "Apex Physics Engine",
-  "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, natural procedural idle and walking poses, stable single-owner foot orientation, motor-driven NavMesh movement, momentum-preserving ragdolls, get-up recovery, grabbable objects, barcode-driven crates with Void scene previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
+  "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, natural procedural walking, momentum-preserving ragdolls, editor-generated destructible meshes with interior fracture geometry, grabbable objects, barcode-driven crates with Void previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -26,6 +26,12 @@
     "momentum",
     "get-up",
     "recovery",
+    "destruction",
+    "destructible",
+    "fracture",
+    "mesh-slicing",
+    "debris",
+    "interior-geometry",
     "navigation",
     "npc",
     "ai",
