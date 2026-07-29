@@ -2,6 +2,35 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.6] - 2026-07-28
+
+### Fixed
+
+- Replaced the old sole-height calculation that incorrectly treated the NPC's existing air gap as part of the shoe.
+- Added automatic hips-height calibration from the humanoid's actual leg geometry and sampled floor height.
+- The hidden hips anchor now lowers inside the motor when needed so planted feet can physically reach the floor.
+- Reduced trailing legs by using shorter, earlier steps with velocity-based forward lead.
+- Allowed the opposite leg to begin its next step before the current step completely finishes.
+
+### Changed
+
+- Default planted-step distance is reduced from `0.28` to `0.18` metres.
+- Default step duration is reduced from `0.24` to `0.17` seconds.
+- Foot targets use a model-based sole estimate plus a small configurable clearance.
+- Hips-height correction runs before the two-bone leg solve and before the visible body copies the hidden target pose.
+
+### Notes
+
+- Existing NPCs should be rebuilt once after updating so the current PC physical-character modules are refreshed.
+- Unity compilation and Play Mode behavior still require confirmation in the Unity 6.2 Windows test project.
+
+## [0.3.5] - 2026-07-28
+
+### Fixed
+
+- Removed the updater compile error caused by the ambiguous `PackageInfo` type in Unity 6.
+- The installed-version lookup now explicitly uses `UnityEditor.PackageManager.PackageInfo`.
+
 ## [0.3.4] - 2026-07-28
 
 ### Added
