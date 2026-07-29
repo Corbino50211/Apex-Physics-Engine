@@ -2,6 +2,36 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.0] - 2026-07-29
+
+### Added
+
+- `ApexPCPhysicalCharacter`, one PC-first component that owns locomotion, animated pose following, impact ragdoll, and get-up recovery.
+- A generated `Apex PC Character Motor` capsule Rigidbody as the only authoritative active locomotion body.
+- `ApexPCProceduralGait` for automatic Humanoid walking when no Animator Controller is assigned.
+- A simplified PC-only character builder and unified runtime inspector.
+- **Apex Physics Engine > Characters > Rebuild Selected PC Physical Character** for upgrading older generated NPCs.
+
+### Changed
+
+- The 0.3.x authoring workflow only creates PC physical NPCs. VR player generation and tracked-hand setup are postponed.
+- Active characters now follow the animated target exactly for stability instead of relying on competing standing springs.
+- Hard impacts release the complete generated skeleton into dynamic ragdoll simulation.
+- Recovery places the motor beneath the fallen body, triggers optional front/back get-up animations, and blends the body back to the target pose.
+- Generated ragdolls ignore self-collisions by default to prevent overlapping automatic colliders from exploding.
+
+### Removed from new character setup
+
+- Locoball foot tethers.
+- Torso harness forces.
+- The old supported-root and animated-physical controller stack.
+- Physical-player and VR choices from the character builder.
+
+### Notes
+
+- Legacy character components remain in the package so older serialized prefabs can still load.
+- Unity compilation and Play Mode behavior still require validation in the Unity 6.2 test project.
+
 ## [0.1.5] - 2026-07-26
 
 ### Added
