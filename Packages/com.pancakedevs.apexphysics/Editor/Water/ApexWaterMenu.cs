@@ -109,12 +109,11 @@ namespace PancakeDevs.ApexPhysics.Editor
                 RigidbodyConstraints.FreezeRotationX |
                 RigidbodyConstraints.FreezeRotationZ;
             Undo.AddComponent<ApexSwimmer>(swimmerObject);
-            Undo.AddComponent<ApexLegacySwimInput>(swimmerObject);
 
             Selection.activeGameObject = water;
             Debug.Log(
-                "Created Apex water example: lake, buoyant box, and swimmer. " +
-                "The legacy input adapter only runs when the Legacy Input Manager is enabled.",
+                "Created Apex water example: lake, buoyant box, and an input-agnostic swimmer. " +
+                "Feed ApexSwimmer from your Input System actions, AI, networking, or VR controls.",
                 water);
         }
     }
