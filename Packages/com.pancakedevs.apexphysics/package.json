@@ -1,6 +1,6 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "displayName": "Apex Physics Engine",
   "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, planted procedural footsteps, motor-driven NavMesh movement, momentum-preserving ragdolls, get-up recovery, grabbable objects, barcode-driven crates with Void scene previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
   "unity": "6000.0",
