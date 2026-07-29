@@ -5,14 +5,14 @@ namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
     /// Supplies a natural Humanoid idle and walking pose when no Animator Controller is
-    /// assigned. The component also performs a final knee-pole correction after planted-foot
-    /// IK so legs bend forward instead of collapsing inward or trailing behind the motor.
+    /// assigned. The component also performs final knee-pole and toe-direction corrections
+    /// after planted-foot IK so legs bend forward and shoes visibly roll upward.
     /// </summary>
     [DefaultExecutionOrder(-270)]
     [DisallowMultipleComponent]
     public sealed class ApexPCProceduralGait : MonoBehaviour
     {
-        private const int CurrentSettingsVersion = 1;
+        private const int CurrentSettingsVersion = 2;
 
         [SerializeField] private ApexPCPhysicalCharacter character;
         [SerializeField] private Animator targetAnimator;
@@ -36,6 +36,10 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField, Range(0f, 1f)] private float kneeForwardBias = 0.92f;
         [SerializeField, Range(0f, 0.75f)] private float kneeOutwardBias = 0.18f;
         [SerializeField, Range(0f, 1f)] private float kneeCorrectionStrength = 1f;
+
+        [Header("Toe Direction")]
+        [SerializeField, Range(0f, 25f)] private float plantedToeUpDegrees = 8f;
+        [SerializeField, Range(0f, 20f)] private float movingToeUpExtraDegrees = 4f;
         [SerializeField, HideInInspector] private int settingsVersion;
 
         private HumanPoseHandler poseHandler;
@@ -53,9 +57,11 @@ namespace PancakeDevs.ApexPhysics
         private Transform leftUpperLeg;
         private Transform leftLowerLeg;
         private Transform leftFoot;
+        private Transform leftToes;
         private Transform rightUpperLeg;
         private Transform rightLowerLeg;
         private Transform rightFoot;
+        private Transform rightToes;
         private Transform leftUpperArm;
         private Transform leftLowerArm;
         private Transform rightUpperArm;
@@ -138,11 +144,13 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            // ApexPCFootPlanting runs at -275. This component runs at -270, so the final
-            // pole solve happens after foot placement but before ApexPCPhysicalCharacter
+            // ApexPCFootPlanting runs at -275. This component runs at -270, so these final
+            // corrections happen after foot placement but before ApexPCPhysicalCharacter
             // copies the target pose at -250.
             StabilizeKnee(leftUpperLeg, leftLowerLeg, leftFoot, -1f);
             StabilizeKnee(rightUpperLeg, rightLowerLeg, rightFoot, 1f);
+            AimToeUp(leftFoot, leftToes);
+            AimToeUp(rightFoot, rightToes);
         }
 
         public void Configure(ApexPCPhysicalCharacter owner)
@@ -206,9 +214,11 @@ namespace PancakeDevs.ApexPhysics
             leftUpperLeg = targetAnimator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
             leftLowerLeg = targetAnimator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
             leftFoot = targetAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            leftToes = targetAnimator.GetBoneTransform(HumanBodyBones.LeftToes);
             rightUpperLeg = targetAnimator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
             rightLowerLeg = targetAnimator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
             rightFoot = targetAnimator.GetBoneTransform(HumanBodyBones.RightFoot);
+            rightToes = targetAnimator.GetBoneTransform(HumanBodyBones.RightToes);
             leftUpperArm = targetAnimator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             leftLowerArm = targetAnimator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
             rightUpperArm = targetAnimator.GetBoneTransform(HumanBodyBones.RightUpperArm);
@@ -220,9 +230,11 @@ namespace PancakeDevs.ApexPhysics
             leftUpperLeg = null;
             leftLowerLeg = null;
             leftFoot = null;
+            leftToes = null;
             rightUpperLeg = null;
             rightLowerLeg = null;
             rightFoot = null;
+            rightToes = null;
             leftUpperArm = null;
             leftLowerArm = null;
             rightUpperArm = null;
@@ -340,6 +352,44 @@ namespace PancakeDevs.ApexPhysics
             }
         }
 
+        private void AimToeUp(Transform foot, Transform toes)
+        {
+            if (foot == null || toes == null || character == null || character.MotorBody == null)
+            {
+                return;
+            }
+
+            Vector3 currentToeDirection = toes.position - foot.position;
+            if (currentToeDirection.sqrMagnitude < 0.000001f)
+            {
+                return;
+            }
+
+            Vector3 groundNormal = Vector3.up;
+            Vector3 planarToeDirection = Vector3.ProjectOnPlane(currentToeDirection, groundNormal);
+            if (planarToeDirection.sqrMagnitude < 0.000001f)
+            {
+                planarToeDirection = Vector3.ProjectOnPlane(
+                    character.MotorBody.transform.forward,
+                    groundNormal);
+            }
+            if (planarToeDirection.sqrMagnitude < 0.000001f)
+            {
+                return;
+            }
+
+            float toeUpDegrees = plantedToeUpDegrees + movingToeUpExtraDegrees * smoothedSpeed;
+            float toeUpRadians = toeUpDegrees * Mathf.Deg2Rad;
+            Vector3 desiredToeDirection =
+                planarToeDirection.normalized * Mathf.Cos(toeUpRadians) +
+                groundNormal * Mathf.Sin(toeUpRadians);
+
+            Quaternion correction = Quaternion.FromToRotation(
+                currentToeDirection.normalized,
+                desiredToeDirection.normalized);
+            foot.rotation = correction * foot.rotation;
+        }
+
         private void ResetPose()
         {
             smoothedSpeed = 0f;
@@ -379,22 +429,27 @@ namespace PancakeDevs.ApexPhysics
 
         private void ApplyVersionedDefaults()
         {
-            if (settingsVersion >= CurrentSettingsVersion)
+            if (settingsVersion < 1)
             {
-                return;
+                legSwing = 0.3f;
+                kneeBend = 0.5f;
+                footLift = 0.12f;
+                armSwing = 0.28f;
+                armOutward = 0.07f;
+                armDownWeight = 1f;
+                kneeForwardBias = 0.92f;
+                kneeOutwardBias = 0.18f;
+                kneeCorrectionStrength = 1f;
+                speedBlendRate = 7f;
+                settingsVersion = 1;
             }
 
-            legSwing = 0.3f;
-            kneeBend = 0.5f;
-            footLift = 0.12f;
-            armSwing = 0.28f;
-            armOutward = 0.07f;
-            armDownWeight = 1f;
-            kneeForwardBias = 0.92f;
-            kneeOutwardBias = 0.18f;
-            kneeCorrectionStrength = 1f;
-            speedBlendRate = 7f;
-            settingsVersion = CurrentSettingsVersion;
+            if (settingsVersion < CurrentSettingsVersion)
+            {
+                plantedToeUpDegrees = Mathf.Max(plantedToeUpDegrees, 8f);
+                movingToeUpExtraDegrees = Mathf.Max(movingToeUpExtraDegrees, 4f);
+                settingsVersion = CurrentSettingsVersion;
+            }
         }
 
         private static int FindMuscle(params string[] candidates)
@@ -433,6 +488,8 @@ namespace PancakeDevs.ApexPhysics
             kneeForwardBias = Mathf.Clamp01(kneeForwardBias);
             kneeOutwardBias = Mathf.Clamp(kneeOutwardBias, 0f, 0.75f);
             kneeCorrectionStrength = Mathf.Clamp01(kneeCorrectionStrength);
+            plantedToeUpDegrees = Mathf.Clamp(plantedToeUpDegrees, 0f, 25f);
+            movingToeUpExtraDegrees = Mathf.Clamp(movingToeUpExtraDegrees, 0f, 20f);
         }
 #endif
     }
