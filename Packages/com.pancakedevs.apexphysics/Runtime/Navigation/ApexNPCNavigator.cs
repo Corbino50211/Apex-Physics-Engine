@@ -6,7 +6,9 @@ namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
     /// Path-planning layer for an Apex NPC. The NavMeshAgent calculates routes and
-    /// avoidance, but does not directly move or rotate the NPC transform.
+    /// avoidance, but does not directly move or rotate the NPC transform. A separate
+    /// movement root can be assigned when the physical locomotion body does not live on
+    /// the same GameObject as this navigator.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NavMeshAgent))]
@@ -22,6 +24,11 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField, Min(0.02f)] private float repathInterval = 0.25f;
         [SerializeField, Min(0.01f)] private float navMeshSampleDistance = 2f;
         [SerializeField] private bool keepAgentSyncedToTransform = true;
+
+        [Header("External Movement Root")]
+        [Tooltip("Optional authoritative locomotion transform. Apex PC characters assign their motor here.")]
+        [SerializeField] private Transform movementRoot;
+        [SerializeField] private bool projectMovementRootToNavMesh = true;
 
         private NavMeshAgent cachedAgent;
         private Vector3 destination;
@@ -43,22 +50,26 @@ namespace PancakeDevs.ApexPhysics
         }
 
         public Transform Target => target;
+        public Transform MovementRoot => movementRoot;
         public bool HasDestination => hasDestination;
         public Vector3 Destination => destination;
+        public Vector3 NavigationPosition => ResolveNavigationPosition();
         public bool IsOnNavMesh => CanUseAgent() && cachedAgent.isOnNavMesh;
         public bool HasPath => IsOnNavMesh && cachedAgent.hasPath;
         public bool IsPathPending => IsOnNavMesh && cachedAgent.pathPending;
         public NavMeshPathStatus PathStatus => IsOnNavMesh
             ? cachedAgent.pathStatus
             : NavMeshPathStatus.PathInvalid;
+        public bool HasCompletePath => HasPath && !IsPathPending &&
+                                       PathStatus == NavMeshPathStatus.PathComplete;
         public Vector3 DesiredVelocity => IsOnNavMesh
             ? cachedAgent.desiredVelocity
             : Vector3.zero;
         public Vector3 SteeringTarget => HasPath
             ? cachedAgent.steeringTarget
-            : transform.position;
+            : NavigationPosition;
         public float RemainingDistance => hasDestination
-            ? Vector3.Distance(transform.position, destination)
+            ? Vector3.Distance(NavigationPosition, destination)
             : 0f;
         public bool HasReachedDestination => destinationReached;
 
@@ -110,9 +121,31 @@ namespace PancakeDevs.ApexPhysics
 
         private void LateUpdate()
         {
-            if (keepAgentSyncedToTransform && IsOnNavMesh)
+            if (!keepAgentSyncedToTransform || !IsOnNavMesh)
             {
-                cachedAgent.nextPosition = transform.position;
+                return;
+            }
+
+            if (TryResolveProjectedNavigationPosition(out Vector3 navigationPosition))
+            {
+                cachedAgent.nextPosition = navigationPosition;
+            }
+        }
+
+        public void ConfigureMovementRoot(Transform newMovementRoot)
+        {
+            movementRoot = newMovementRoot;
+            nextRepathTime = Time.time;
+
+            if (!isActiveAndEnabled)
+            {
+                return;
+            }
+
+            TryBindToNavMesh();
+            if (hasDestination)
+            {
+                ForceRepath();
             }
         }
 
@@ -168,6 +201,23 @@ namespace PancakeDevs.ApexPhysics
             return accepted;
         }
 
+        public bool ForceRepath()
+        {
+            if (!hasDestination)
+            {
+                return false;
+            }
+
+            Vector3 savedDestination = destination;
+            if (!TryBindToNavMesh())
+            {
+                PathFailed?.Invoke(this);
+                return false;
+            }
+
+            return SetDestination(savedDestination);
+        }
+
         public void ClearDestination()
         {
             hasDestination = false;
@@ -187,24 +237,21 @@ namespace PancakeDevs.ApexPhysics
                 return false;
             }
 
-            if (cachedAgent.isOnNavMesh)
-            {
-                return true;
-            }
-
-            if (!NavMesh.SamplePosition(
-                    transform.position,
-                    out NavMeshHit hit,
-                    navMeshSampleDistance,
-                    cachedAgent.areaMask))
+            if (!TryResolveProjectedNavigationPosition(out Vector3 navigationPosition))
             {
                 return false;
             }
 
-            bool warped = cachedAgent.Warp(hit.position);
+            if (cachedAgent.isOnNavMesh)
+            {
+                cachedAgent.nextPosition = navigationPosition;
+                return true;
+            }
+
+            bool warped = cachedAgent.Warp(navigationPosition);
             if (warped && keepAgentSyncedToTransform)
             {
-                cachedAgent.nextPosition = transform.position;
+                cachedAgent.nextPosition = navigationPosition;
             }
 
             return warped;
@@ -218,13 +265,45 @@ namespace PancakeDevs.ApexPhysics
             }
 
             float arrivalDistance = Mathf.Max(stoppingDistance, 0.01f);
-            if ((transform.position - destination).sqrMagnitude > arrivalDistance * arrivalDistance)
+            Vector3 difference = NavigationPosition - destination;
+            difference.y = 0f;
+            if (difference.sqrMagnitude > arrivalDistance * arrivalDistance)
             {
                 return;
             }
 
             destinationReached = true;
             DestinationReached?.Invoke(this);
+        }
+
+        private Vector3 ResolveNavigationPosition()
+        {
+            if (TryResolveProjectedNavigationPosition(out Vector3 projected))
+            {
+                return projected;
+            }
+
+            return movementRoot != null ? movementRoot.position : transform.position;
+        }
+
+        private bool TryResolveProjectedNavigationPosition(out Vector3 position)
+        {
+            Vector3 source = movementRoot != null ? movementRoot.position : transform.position;
+            if (!projectMovementRootToNavMesh)
+            {
+                position = source;
+                return true;
+            }
+
+            int areaMask = cachedAgent != null ? cachedAgent.areaMask : NavMesh.AllAreas;
+            if (NavMesh.SamplePosition(source, out NavMeshHit hit, navMeshSampleDistance, areaMask))
+            {
+                position = hit.position;
+                return true;
+            }
+
+            position = source;
+            return false;
         }
 
         private void ConfigureAgent()
@@ -272,7 +351,9 @@ namespace PancakeDevs.ApexPhysics
             {
                 Vector3 point = target != null ? target.position : destination;
                 Gizmos.DrawWireSphere(point, Mathf.Max(stoppingDistance, 0.05f));
-                Gizmos.DrawLine(transform.position, point);
+                Gizmos.DrawLine(
+                    movementRoot != null ? movementRoot.position : transform.position,
+                    point);
             }
         }
 #endif
