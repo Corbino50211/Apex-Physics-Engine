@@ -58,36 +58,113 @@ namespace PancakeDevs.ApexPhysics.Editor
             groundProbe.SetParent(root.transform, false);
             groundProbe.localPosition = new Vector3(0f, 0.35f, 0f);
 
-            SerializedObject motorObject = new SerializedObject(motor);
-            motorObject.FindProperty("movementReference").objectReferenceValue = cameraTransform;
-            motorObject.FindProperty("groundProbe").objectReferenceValue = groundProbe;
-            motorObject.ApplyModifiedPropertiesWithoutUndo();
-
-            SerializedObject lookObject = new SerializedObject(look);
-            lookObject.FindProperty("yawRoot").objectReferenceValue = root.transform;
-            lookObject.FindProperty("pitchRoot").objectReferenceValue = cameraPivot;
-            lookObject.ApplyModifiedPropertiesWithoutUndo();
-
-            SerializedObject interactionSettings = new SerializedObject(playerInteraction);
-            interactionSettings.FindProperty("viewCamera").objectReferenceValue = camera;
-            interactionSettings.FindProperty("grabber").objectReferenceValue = grabber;
-            interactionSettings.FindProperty("holdTarget").objectReferenceValue = interaction;
-            interactionSettings.FindProperty("playerColliders").arraySize = 1;
-            interactionSettings.FindProperty("playerColliders").GetArrayElementAtIndex(0).objectReferenceValue = capsule;
-            interactionSettings.ApplyModifiedPropertiesWithoutUndo();
-
-            SerializedObject inputObject = new SerializedObject(input);
-            inputObject.FindProperty("motor").objectReferenceValue = motor;
-            inputObject.FindProperty("look").objectReferenceValue = look;
-            inputObject.FindProperty("grabber").objectReferenceValue = grabber;
-            inputObject.FindProperty("interaction").objectReferenceValue = playerInteraction;
-            inputObject.ApplyModifiedPropertiesWithoutUndo();
+            ConfigureMotor(motor, cameraTransform, groundProbe);
+            ConfigureLook(look, root.transform, cameraPivot);
+            ConfigureInteraction(playerInteraction, camera, grabber, interaction, new Collider[] { capsule });
+            ConfigureInput(input, motor, look, grabber, playerInteraction);
 
             Selection.activeGameObject = root;
             EditorSceneManager.MarkSceneDirty(root.scene);
             Debug.Log(
                 "Created Apex PC Player Rig. Controls: WASD, mouse, Space, Shift, E grab/release, mouse wheel hold distance, left click throw, Escape unlock cursor.",
                 root);
+        }
+
+        [MenuItem("Apex Physics Engine/Player/Upgrade Selected PC Player Interaction", priority = 101)]
+        private static void UpgradeSelectedPlayer()
+        {
+            GameObject root = Selection.activeGameObject;
+            if (root == null)
+            {
+                Debug.LogWarning("Select the root of an existing Apex PC Player rig first.");
+                return;
+            }
+
+            ApexPCPlayerMotor motor = root.GetComponent<ApexPCPlayerMotor>();
+            ApexPCPlayerLook look = root.GetComponent<ApexPCPlayerLook>();
+            ApexPCPlayerInput input = root.GetComponent<ApexPCPlayerInput>();
+            Camera camera = root.GetComponentInChildren<Camera>(true);
+            ApexGrabber grabber = root.GetComponentInChildren<ApexGrabber>(true);
+
+            if (motor == null || look == null || input == null || camera == null || grabber == null)
+            {
+                Debug.LogError("The selected object is not a complete Apex PC Player rig.", root);
+                return;
+            }
+
+            ApexPCPlayerInteraction playerInteraction = root.GetComponent<ApexPCPlayerInteraction>();
+            if (playerInteraction == null)
+            {
+                playerInteraction = Undo.AddComponent<ApexPCPlayerInteraction>(root);
+            }
+
+            Transform holdTarget = grabber.GripTarget;
+            Collider[] playerColliders = root.GetComponentsInChildren<Collider>(true);
+            ConfigureInteraction(playerInteraction, camera, grabber, holdTarget, playerColliders);
+            ConfigureInput(input, motor, look, grabber, playerInteraction);
+
+            EditorUtility.SetDirty(root);
+            EditorSceneManager.MarkSceneDirty(root.scene);
+            Debug.Log("Upgraded the selected Apex PC Player rig with 0.6.1 interaction controls.", root);
+        }
+
+        [MenuItem("Apex Physics Engine/Player/Upgrade Selected PC Player Interaction", true)]
+        private static bool ValidateUpgradeSelectedPlayer()
+        {
+            return Selection.activeGameObject != null;
+        }
+
+        private static void ConfigureMotor(ApexPCPlayerMotor motor, Transform movementReference, Transform groundProbe)
+        {
+            SerializedObject serialized = new SerializedObject(motor);
+            serialized.FindProperty("movementReference").objectReferenceValue = movementReference;
+            serialized.FindProperty("groundProbe").objectReferenceValue = groundProbe;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureLook(ApexPCPlayerLook look, Transform yawRoot, Transform pitchRoot)
+        {
+            SerializedObject serialized = new SerializedObject(look);
+            serialized.FindProperty("yawRoot").objectReferenceValue = yawRoot;
+            serialized.FindProperty("pitchRoot").objectReferenceValue = pitchRoot;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureInteraction(
+            ApexPCPlayerInteraction interaction,
+            Camera camera,
+            ApexGrabber grabber,
+            Transform holdTarget,
+            Collider[] playerColliders)
+        {
+            SerializedObject serialized = new SerializedObject(interaction);
+            serialized.FindProperty("viewCamera").objectReferenceValue = camera;
+            serialized.FindProperty("grabber").objectReferenceValue = grabber;
+            serialized.FindProperty("holdTarget").objectReferenceValue = holdTarget;
+
+            SerializedProperty colliders = serialized.FindProperty("playerColliders");
+            colliders.arraySize = playerColliders != null ? playerColliders.Length : 0;
+            for (int i = 0; i < colliders.arraySize; i++)
+            {
+                colliders.GetArrayElementAtIndex(i).objectReferenceValue = playerColliders[i];
+            }
+
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureInput(
+            ApexPCPlayerInput input,
+            ApexPCPlayerMotor motor,
+            ApexPCPlayerLook look,
+            ApexGrabber grabber,
+            ApexPCPlayerInteraction interaction)
+        {
+            SerializedObject serialized = new SerializedObject(input);
+            serialized.FindProperty("motor").objectReferenceValue = motor;
+            serialized.FindProperty("look").objectReferenceValue = look;
+            serialized.FindProperty("grabber").objectReferenceValue = grabber;
+            serialized.FindProperty("interaction").objectReferenceValue = interaction;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static Vector3 FindSpawnPosition()
