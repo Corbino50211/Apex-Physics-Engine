@@ -1,10 +1,10 @@
 # Apex Destruction
 
-Apex 0.4.0 introduces editor-generated mesh fracture and impact-driven runtime destruction.
+Apex 0.4.x uses editor-generated fracture geometry with selectable runtime activation. The expensive mesh slicing and collider creation happen in Edit Mode, while the finished object can break automatically from force during gameplay.
 
 ## Supported source objects
 
-The first destruction foundation supports a scene object with:
+The destruction foundation supports a scene object with:
 
 - One `MeshFilter` and `MeshRenderer` on the selected GameObject.
 - A closed, manifold mesh with real volume.
@@ -38,9 +38,43 @@ It also adds the required intact collider, kinematic Rigidbody, `ApexBody`, and 
 - **Interior UV Scale** controls planar UV density on newly generated cut surfaces.
 - **Interior Material** is assigned to the generated cap polygons. When empty, Apex reuses the final source material.
 
-## Runtime behavior
+## Runtime fracture trigger
 
-The object remains intact until an impact exceeds **Break Impulse**.
+The generated chunks can activate in two ways:
+
+### Manual Only
+
+Collisions never start the first fracture automatically. Trigger it from gameplay code, a UnityEvent, or the Play Mode inspector buttons using:
+
+```csharp
+using PancakeDevs.ApexPhysics;
+using UnityEngine;
+
+public sealed class BreakWall : MonoBehaviour
+{
+    [SerializeField] private ApexDestructible destructible;
+
+    public void BreakNow()
+    {
+        destructible.BreakAll();
+    }
+}
+```
+
+`BreakAt(worldPoint, direction, impulse)` can be used for a local partial break.
+
+### Impact Threshold
+
+The object automatically fractures during Play Mode when a collision reaches **Break Threshold**.
+
+**Threshold Measurement** selects the unit:
+
+- **Collision Impulse** uses Unity's collision impulse in newton-seconds (`N·s`). This is the most direct and stable option.
+- **Estimated Force** divides collision impulse by the current Fixed Timestep to estimate force in newtons (`N`). It is convenient for force-style tuning, but it remains an approximation because Unity resolves impacts over physics steps.
+
+The actual debris momentum always uses the original collision impulse. Selecting Estimated Force only changes the threshold comparison.
+
+## Runtime behavior
 
 On the first break:
 
@@ -59,15 +93,18 @@ During Play Mode, select the `ApexDestructible` and use:
 - **Break At Center** to test a local partial break.
 - **Break All** to release every chunk.
 
+These manual buttons work in both trigger modes.
+
 ## Cleanup
 
 Use **Clear Generated Fracture** in the `ApexDestructible` inspector or fracture window. Apex removes both the generated hierarchy and the generated mesh asset folder.
 
 ## Current limitations
 
-- Fracturing happens in the Unity Editor, not during gameplay.
-- The initial release supports one `MeshFilter` per destructible object.
+- Fracture geometry is generated in the Unity Editor, not remeshed during gameplay.
+- Runtime force/impact activation uses those pre-generated chunks.
+- The current release supports one `MeshFilter` per destructible object.
 - Generated chunks use convex `MeshCollider` components.
 - Complex meshes can exceed Unity convex-collider cooking limits.
 - Network replication and save-state restoration are not included yet.
-- Runtime slicing and bullet-hole remeshing are later milestones.
+- True runtime slicing and bullet-hole remeshing are later milestones.
