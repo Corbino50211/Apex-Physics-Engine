@@ -187,7 +187,7 @@ namespace PancakeDevs.ApexPhysics
 
     /// <summary>
     /// Dynamic Rigidbody hand driven toward an OpenXR controller target with a
-    /// stable velocity/torque servo and a shoulder-relative reach limit.
+    /// low-latency velocity servo and a shoulder-relative reach limit.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
@@ -197,15 +197,18 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private Transform shoulder;
         [SerializeField] private ApexGrabber grabber;
         [SerializeField, Min(0.1f)] private float maximumReach = 0.85f;
-        [SerializeField, Min(0f)] private float positionStrength = 45f;
-        [SerializeField, Min(0f)] private float positionDamping = 10f;
-        [SerializeField, Min(0f)] private float rotationStrength = 35f;
-        [SerializeField, Min(0f)] private float rotationDamping = 8f;
-        [SerializeField, Min(0f)] private float maximumSpeed = 12f;
-        [SerializeField, Min(0f)] private float maximumAngularSpeed = 30f;
+        [SerializeField, Min(0f)] private float positionStrength = 55f;
+        [SerializeField, Min(0f)] private float velocityCorrection = 0.85f;
+        [SerializeField, Min(0f)] private float rotationStrength = 45f;
+        [SerializeField, Min(0f)] private float angularCorrection = 0.9f;
+        [SerializeField, Min(0f)] private float maximumSpeed = 18f;
+        [SerializeField, Min(0f)] private float maximumAngularSpeed = 40f;
         [SerializeField, Min(0f)] private float teleportDistance = 1.5f;
 
         private Rigidbody handBody;
+        private Vector3 sampledPosition;
+        private Quaternion sampledRotation = Quaternion.identity;
+        private bool hasSampledPose;
 
         public ApexGrabber Grabber => grabber;
         public Transform TrackingTarget => trackingTarget;
@@ -214,20 +217,50 @@ namespace PancakeDevs.ApexPhysics
         {
             handBody = GetComponent<Rigidbody>();
             handBody.maxAngularVelocity = maximumAngularSpeed;
+            handBody.interpolation = RigidbodyInterpolation.None;
             if (grabber == null)
             {
                 grabber = GetComponent<ApexGrabber>();
             }
+
+            SampleTrackingPose();
         }
 
-        private void FixedUpdate()
+        private void OnEnable()
         {
-            if (trackingTarget == null || handBody == null)
+            Application.onBeforeRender += SampleTrackingPose;
+        }
+
+        private void OnDisable()
+        {
+            Application.onBeforeRender -= SampleTrackingPose;
+        }
+
+        private void Update()
+        {
+            SampleTrackingPose();
+        }
+
+        private void SampleTrackingPose()
+        {
+            if (trackingTarget == null)
             {
                 return;
             }
 
-            Vector3 targetPosition = trackingTarget.position;
+            sampledPosition = trackingTarget.position;
+            sampledRotation = trackingTarget.rotation;
+            hasSampledPose = true;
+        }
+
+        private void FixedUpdate()
+        {
+            if (!hasSampledPose || handBody == null)
+            {
+                return;
+            }
+
+            Vector3 targetPosition = sampledPosition;
             if (shoulder != null)
             {
                 Vector3 shoulderToTarget = targetPosition - shoulder.position;
@@ -241,31 +274,33 @@ namespace PancakeDevs.ApexPhysics
             if (positionError.magnitude > teleportDistance)
             {
                 handBody.position = targetPosition;
-                handBody.rotation = trackingTarget.rotation;
+                handBody.rotation = sampledRotation;
                 handBody.linearVelocity = Vector3.zero;
                 handBody.angularVelocity = Vector3.zero;
                 return;
             }
 
-            Vector3 targetVelocity = positionError * positionStrength - handBody.linearVelocity * positionDamping;
-            handBody.AddForce(
-                Vector3.ClampMagnitude(targetVelocity, maximumSpeed),
-                ForceMode.Acceleration);
+            Vector3 desiredVelocity = Vector3.ClampMagnitude(
+                positionError * positionStrength,
+                maximumSpeed);
+            Vector3 velocityChange = (desiredVelocity - handBody.linearVelocity) * velocityCorrection;
+            handBody.AddForce(velocityChange, ForceMode.VelocityChange);
 
-            Quaternion error = trackingTarget.rotation * Quaternion.Inverse(handBody.rotation);
-            error.ToAngleAxis(out float angle, out Vector3 axis);
+            Quaternion rotationError = sampledRotation * Quaternion.Inverse(handBody.rotation);
+            rotationError.ToAngleAxis(out float angle, out Vector3 axis);
             if (angle > 180f)
             {
                 angle -= 360f;
             }
 
-            if (!float.IsNaN(axis.x))
+            if (!float.IsNaN(axis.x) && axis.sqrMagnitude > 0.000001f)
             {
-                Vector3 torque = axis * (angle * Mathf.Deg2Rad * rotationStrength) -
-                                 handBody.angularVelocity * rotationDamping;
-                handBody.AddTorque(
-                    Vector3.ClampMagnitude(torque, maximumAngularSpeed),
-                    ForceMode.Acceleration);
+                Vector3 desiredAngularVelocity = Vector3.ClampMagnitude(
+                    axis.normalized * angle * Mathf.Deg2Rad * rotationStrength,
+                    maximumAngularSpeed);
+                Vector3 angularChange =
+                    (desiredAngularVelocity - handBody.angularVelocity) * angularCorrection;
+                handBody.AddTorque(angularChange, ForceMode.VelocityChange);
             }
         }
 
