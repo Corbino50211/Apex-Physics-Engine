@@ -68,14 +68,24 @@ namespace PancakeDevs.ApexPhysics.Editor
 
             try
             {
-                Renderer[] intactRenderers = target.GetComponentsInChildren<Renderer>(true);
-                Collider[] intactColliders = target.GetComponentsInChildren<Collider>(true);
+                Collider sourceCollider = target.GetComponent<Collider>();
+                if (sourceCollider == null)
+                {
+                    MeshCollider generatedIntactCollider = Undo.AddComponent<MeshCollider>(target);
+                    generatedIntactCollider.sharedMesh = sourceFilter.sharedMesh;
+                    generatedIntactCollider.convex = true;
+                    sourceCollider = generatedIntactCollider;
+                }
 
                 Rigidbody sourceBody = target.GetComponent<Rigidbody>();
                 if (sourceBody == null)
                 {
                     sourceBody = Undo.AddComponent<Rigidbody>(target);
+                    sourceBody.isKinematic = true;
+                    sourceBody.useGravity = false;
+                    sourceBody.interpolation = RigidbodyInterpolation.Interpolate;
                 }
+                sourceBody.detectCollisions = true;
 
                 ApexBody apexBody = target.GetComponent<ApexBody>();
                 if (apexBody == null)
@@ -87,6 +97,9 @@ namespace PancakeDevs.ApexPhysics.Editor
                 {
                     destructible = Undo.AddComponent<ApexDestructible>(target);
                 }
+
+                Renderer[] intactRenderers = target.GetComponentsInChildren<Renderer>(true);
+                Collider[] intactColliders = target.GetComponentsInChildren<Collider>(true);
 
                 GameObject rootObject = new GameObject(GeneratedRootName);
                 Undo.RegisterCreatedObjectUndo(rootObject, "Generate Apex Fracture");
@@ -161,6 +174,7 @@ namespace PancakeDevs.ApexPhysics.Editor
 
                 EditorUtility.SetDirty(destructible);
                 EditorUtility.SetDirty(sourceBody);
+                EditorUtility.SetDirty(sourceCollider);
                 EditorSceneManager.MarkSceneDirty(target.scene);
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
