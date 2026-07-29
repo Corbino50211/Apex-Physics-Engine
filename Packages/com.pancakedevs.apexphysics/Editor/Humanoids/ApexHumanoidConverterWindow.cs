@@ -100,6 +100,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                     if (converted != null)
                     {
                         converted.EnsurePCPhysicalCharacter();
+                        EnsureMotorFitter(converted);
                         character = converted.gameObject;
                     }
                 }
@@ -114,7 +115,25 @@ namespace PancakeDevs.ApexPhysics.Editor
                 ApexPhysicalHumanoidMode.PhysicalNPC,
                 saveAsPrefab,
                 createCrate);
-            converted?.EnsurePCPhysicalCharacter();
+            if (converted != null)
+            {
+                converted.EnsurePCPhysicalCharacter();
+                EnsureMotorFitter(converted);
+            }
+        }
+
+        private static void EnsureMotorFitter(ApexPhysicalHumanoid humanoid)
+        {
+            ApexPCMotorFitter fitter = humanoid.GetComponent<ApexPCMotorFitter>();
+            if (fitter == null)
+            {
+                fitter = Undo.AddComponent<ApexPCMotorFitter>(humanoid.gameObject);
+            }
+
+            Undo.RecordObject(fitter, "Fit Apex PC Character Motor");
+            fitter.Configure(humanoid);
+            EditorUtility.SetDirty(fitter);
+            EditorUtility.SetDirty(humanoid);
         }
     }
 }
