@@ -1,4 +1,3 @@
-using System;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -10,6 +9,7 @@ namespace PancakeDevs.ApexPhysics.Editor
     {
         private const string CreatePath =
             "Apex Physics Engine/Player/Create Apex Physical OpenXR Rig";
+
         private const string BindHumanoidPath =
             "Apex Physics Engine/Player/Bind Selected Humanoid to Physical OpenXR Rig";
 
@@ -58,6 +58,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                 "Left Controller Target",
                 XRNode.LeftHand,
                 new Vector3(-0.25f, 1.3f, 0.35f));
+
             Transform rightTarget = CreateTrackedTarget(
                 trackingOrigin,
                 "Right Controller Target",
@@ -66,6 +67,7 @@ namespace PancakeDevs.ApexPhysics.Editor
 
             Transform leftShoulder = CreateChild(head, "Left Shoulder Anchor");
             leftShoulder.localPosition = new Vector3(-0.18f, -0.2f, 0f);
+
             Transform rightShoulder = CreateChild(head, "Right Shoulder Anchor");
             rightShoulder.localPosition = new Vector3(0.18f, -0.2f, 0f);
 
@@ -75,6 +77,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                 leftTarget,
                 leftShoulder,
                 capsule);
+
             ApexPhysicalOpenXRHand rightHand = CreatePhysicalHand(
                 root.transform,
                 "Right Physical Hand",
@@ -97,7 +100,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             Undo.CollapseUndoOperations(undoGroup);
 
             Debug.Log(
-                "Created Apex Physical OpenXR Rig. Enable OpenXR for the Standalone target before entering Play Mode.",
+                "Created Apex Physical OpenXR Rig. Enable OpenXR for Standalone before entering Play Mode.",
                 root);
         }
 
@@ -124,8 +127,10 @@ namespace PancakeDevs.ApexPhysics.Editor
                 return;
             }
 
-            ApexPhysicalOpenXRBody physicalBody = Object.FindFirstObjectByType<ApexPhysicalOpenXRBody>(
-                FindObjectsInactive.Include);
+            ApexPhysicalOpenXRBody physicalBody =
+                UnityEngine.Object.FindFirstObjectByType<ApexPhysicalOpenXRBody>(
+                    FindObjectsInactive.Include);
+
             if (physicalBody == null)
             {
                 EditorUtility.DisplayDialog(
@@ -135,7 +140,11 @@ namespace PancakeDevs.ApexPhysics.Editor
                 return;
             }
 
-            FindRigHands(physicalBody, out ApexPhysicalOpenXRHand leftHand, out ApexPhysicalOpenXRHand rightHand);
+            FindRigHands(
+                physicalBody,
+                out ApexPhysicalOpenXRHand leftHand,
+                out ApexPhysicalOpenXRHand rightHand);
+
             if (leftHand == null || rightHand == null || physicalBody.Head == null)
             {
                 EditorUtility.DisplayDialog(
@@ -145,8 +154,9 @@ namespace PancakeDevs.ApexPhysics.Editor
                 return;
             }
 
-            Type avatarType = Type.GetType(
+            System.Type avatarType = System.Type.GetType(
                 "PancakeDevs.ApexPhysics.ApexPhysicalVRAvatar, PancakeDevs.ApexPhysics.Runtime");
+
             if (avatarType == null || !typeof(MonoBehaviour).IsAssignableFrom(avatarType))
             {
                 EditorUtility.DisplayDialog(
@@ -159,7 +169,11 @@ namespace PancakeDevs.ApexPhysics.Editor
             int undoGroup = Undo.GetCurrentGroup();
             Undo.SetCurrentGroupName("Bind Humanoid to Apex Physical VR Rig");
 
-            Undo.SetTransformParent(selected.transform, physicalBody.transform, "Parent Apex VR Avatar");
+            Undo.SetTransformParent(
+                selected.transform,
+                physicalBody.transform,
+                "Parent Apex VR Avatar");
+
             selected.transform.localPosition = Vector3.zero;
             selected.transform.localRotation = Quaternion.identity;
 
@@ -203,9 +217,10 @@ namespace PancakeDevs.ApexPhysics.Editor
             leftHand = null;
             rightHand = null;
 
-            ApexPhysicalOpenXRHand[] hands = Object.FindObjectsByType<ApexPhysicalOpenXRHand>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
+            ApexPhysicalOpenXRHand[] hands =
+                UnityEngine.Object.FindObjectsByType<ApexPhysicalOpenXRHand>(
+                    FindObjectsInactive.Include,
+                    FindObjectsSortMode.None);
 
             foreach (ApexPhysicalOpenXRHand hand in hands)
             {
@@ -249,7 +264,9 @@ namespace PancakeDevs.ApexPhysics.Editor
                 }
 
                 string lowerName = renderer.name.ToLowerInvariant();
-                if (lowerName.Contains("visual") || lowerName.Contains("sphere") || lowerName.Contains("debug"))
+                if (lowerName.Contains("visual") ||
+                    lowerName.Contains("sphere") ||
+                    lowerName.Contains("debug"))
                 {
                     Undo.RecordObject(renderer, "Hide Apex Debug Hand Visual");
                     renderer.enabled = false;
@@ -266,7 +283,9 @@ namespace PancakeDevs.ApexPhysics.Editor
         {
             Transform target = CreateChild(parent, name);
             target.localPosition = fallbackLocalPosition;
-            ApexVRTrackedNode tracker = Undo.AddComponent<ApexVRTrackedNode>(target.gameObject);
+
+            ApexVRTrackedNode tracker =
+                Undo.AddComponent<ApexVRTrackedNode>(target.gameObject);
             tracker.EditorConfigure(node);
             return target;
         }
@@ -282,10 +301,12 @@ namespace PancakeDevs.ApexPhysics.Editor
             handTransform.position = trackingTarget.position;
             handTransform.rotation = trackingTarget.rotation;
 
-            SphereCollider collider = Undo.AddComponent<SphereCollider>(handTransform.gameObject);
+            SphereCollider collider =
+                Undo.AddComponent<SphereCollider>(handTransform.gameObject);
             collider.radius = 0.085f;
 
-            Rigidbody rigidbody = Undo.AddComponent<Rigidbody>(handTransform.gameObject);
+            Rigidbody rigidbody =
+                Undo.AddComponent<Rigidbody>(handTransform.gameObject);
             rigidbody.mass = 1.2f;
             rigidbody.useGravity = false;
             rigidbody.isKinematic = false;
@@ -294,7 +315,8 @@ namespace PancakeDevs.ApexPhysics.Editor
             rigidbody.linearDamping = 0.2f;
             rigidbody.angularDamping = 0.2f;
 
-            ApexGrabber grabber = Undo.AddComponent<ApexGrabber>(handTransform.gameObject);
+            ApexGrabber grabber =
+                Undo.AddComponent<ApexGrabber>(handTransform.gameObject);
             ApexPhysicalOpenXRHand hand =
                 Undo.AddComponent<ApexPhysicalOpenXRHand>(handTransform.gameObject);
             hand.EditorConfigure(trackingTarget, shoulder, grabber);
@@ -306,6 +328,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             visual.name = "Hand Visual";
             visual.transform.SetParent(handTransform, false);
             visual.transform.localScale = Vector3.one * 0.16f;
+
             Collider generatedCollider = visual.GetComponent<Collider>();
             if (generatedCollider != null)
             {
