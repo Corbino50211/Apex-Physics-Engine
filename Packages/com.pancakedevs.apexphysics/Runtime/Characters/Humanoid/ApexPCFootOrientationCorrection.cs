@@ -4,9 +4,10 @@ using UnityEngine.SceneManagement;
 namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
-    /// Applies the final procedural foot orientation after planted-foot IK and gait posing.
-    /// The correction uses the motor's horizontal forward axis instead of assuming a model's
-    /// local foot-bone axes. Ground targets, foot positions, and colliders are never changed.
+    /// Owns the final procedural foot rotation after planted-foot IK and gait posing.
+    /// It restores each avatar's original motor-relative foot orientation, aligns it to
+    /// the sampled floor normal, and applies one small world-space toe-up pitch.
+    /// Foot positions, IK targets, sole clearance, and colliders are never changed.
     /// </summary>
     [DefaultExecutionOrder(-255)]
     [DisallowMultipleComponent]
@@ -18,17 +19,23 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private Animator targetAnimator;
 
         [Header("Foot Pitch")]
-        [SerializeField, Range(-20f, 20f)] private float plantedToePitchDegrees = 5f;
-        [SerializeField, Range(0f, 15f)] private float movingToePitchExtraDegrees = 2f;
+        [SerializeField, Range(-15f, 15f)] private float plantedToePitchDegrees = 4f;
+        [SerializeField, Range(0f, 10f)] private float movingToePitchExtraDegrees = 2f;
         [SerializeField, Range(0f, 1f)] private float correctionStrength = 1f;
         [SerializeField, Min(0.1f)] private float referenceSpeed = 3.5f;
 
+        [Header("Floor Alignment")]
+        [SerializeField, Min(0.05f)] private float groundProbeHeight = 0.25f;
+        [SerializeField, Min(0.05f)] private float groundProbeDistance = 0.65f;
+        [SerializeField] private LayerMask groundLayers = ~0;
+
+        private readonly RaycastHit[] groundHits = new RaycastHit[12];
+
         private Transform leftFoot;
-        private Transform leftToes;
         private Transform rightFoot;
-        private Transform rightToes;
-        private float leftForwardSign = 1f;
-        private float rightForwardSign = 1f;
+        private Quaternion leftMotorRotationOffset = Quaternion.identity;
+        private Quaternion rightMotorRotationOffset = Quaternion.identity;
+        private bool rotationsCached;
 
         private void Awake()
         {
@@ -47,7 +54,7 @@ namespace PancakeDevs.ApexPhysics
             targetAnimator = owner != null && owner.Humanoid != null
                 ? owner.Humanoid.TargetAnimator
                 : null;
-            CacheBonesAndDirections();
+            CacheFeetAndBaseRotations();
         }
 
         private void LateUpdate()
@@ -74,8 +81,8 @@ namespace PancakeDevs.ApexPhysics
             float speed01 = Mathf.Clamp01(planarSpeed / Mathf.Max(0.1f, referenceSpeed));
             float pitch = plantedToePitchDegrees + movingToePitchExtraDegrees * speed01;
 
-            CorrectFoot(leftFoot, leftToes, leftForwardSign, pitch);
-            CorrectFoot(rightFoot, rightToes, rightForwardSign, pitch);
+            CorrectFoot(leftFoot, leftMotorRotationOffset, pitch);
+            CorrectFoot(rightFoot, rightMotorRotationOffset, pitch);
         }
 
         private bool ResolveReferences()
@@ -99,66 +106,47 @@ namespace PancakeDevs.ApexPhysics
             if (targetAnimator != resolvedAnimator)
             {
                 targetAnimator = resolvedAnimator;
-                CacheBonesAndDirections();
+                CacheFeetAndBaseRotations();
             }
-            else if (leftFoot == null || rightFoot == null)
+            else if (!rotationsCached || leftFoot == null || rightFoot == null)
             {
-                CacheBonesAndDirections();
+                CacheFeetAndBaseRotations();
             }
 
-            return targetAnimator != null && targetAnimator.isHuman &&
+            return rotationsCached && targetAnimator != null && targetAnimator.isHuman &&
                    leftFoot != null && rightFoot != null;
         }
 
-        private void CacheBonesAndDirections()
+        private void CacheFeetAndBaseRotations()
         {
+            rotationsCached = false;
             leftFoot = null;
-            leftToes = null;
             rightFoot = null;
-            rightToes = null;
-            leftForwardSign = 1f;
-            rightForwardSign = 1f;
+            leftMotorRotationOffset = Quaternion.identity;
+            rightMotorRotationOffset = Quaternion.identity;
 
-            if (targetAnimator == null || !targetAnimator.isHuman)
+            if (targetAnimator == null || !targetAnimator.isHuman ||
+                character == null || character.MotorBody == null)
             {
                 return;
             }
 
             leftFoot = targetAnimator.GetBoneTransform(HumanBodyBones.LeftFoot);
-            leftToes = targetAnimator.GetBoneTransform(HumanBodyBones.LeftToes);
             rightFoot = targetAnimator.GetBoneTransform(HumanBodyBones.RightFoot);
-            rightToes = targetAnimator.GetBoneTransform(HumanBodyBones.RightToes);
-
-            if (character != null && character.MotorBody != null)
+            if (leftFoot == null || rightFoot == null)
             {
-                leftForwardSign = ResolveForwardSign(leftFoot, leftToes);
-                rightForwardSign = ResolveForwardSign(rightFoot, rightToes);
-            }
-        }
-
-        private float ResolveForwardSign(Transform foot, Transform toes)
-        {
-            if (foot == null || toes == null || character == null || character.MotorBody == null)
-            {
-                return 1f;
+                return;
             }
 
-            Vector3 toePlanar = Vector3.ProjectOnPlane(toes.position - foot.position, Vector3.up);
-            Vector3 motorForward = Vector3.ProjectOnPlane(
-                character.MotorBody.transform.forward,
-                Vector3.up);
-            if (toePlanar.sqrMagnitude < 0.000001f || motorForward.sqrMagnitude < 0.000001f)
-            {
-                return 1f;
-            }
-
-            return Vector3.Dot(toePlanar.normalized, motorForward.normalized) >= 0f ? 1f : -1f;
+            Quaternion inverseMotorRotation = Quaternion.Inverse(character.MotorBody.rotation);
+            leftMotorRotationOffset = inverseMotorRotation * leftFoot.rotation;
+            rightMotorRotationOffset = inverseMotorRotation * rightFoot.rotation;
+            rotationsCached = true;
         }
 
         private void CorrectFoot(
             Transform foot,
-            Transform toes,
-            float forwardSign,
+            Quaternion motorRotationOffset,
             float pitchDegrees)
         {
             if (foot == null || character == null || character.MotorBody == null)
@@ -166,52 +154,69 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            Vector3 currentForward;
-            if (toes != null)
-            {
-                currentForward = toes.position - foot.position;
-            }
-            else
-            {
-                currentForward = character.MotorBody.transform.forward * forwardSign;
-            }
+            Rigidbody motor = character.MotorBody;
+            Vector3 groundNormal = SampleGroundNormal(foot.position);
+            Quaternion baseRotation = motor.rotation * motorRotationOffset;
+            Quaternion slopeAlignment = Quaternion.FromToRotation(motor.transform.up, groundNormal);
+            Quaternion slopeAlignedRotation = slopeAlignment * baseRotation;
 
-            if (currentForward.sqrMagnitude < 0.000001f)
+            Vector3 pitchAxis = Vector3.ProjectOnPlane(motor.transform.right, groundNormal);
+            if (pitchAxis.sqrMagnitude < 0.000001f)
             {
-                return;
+                pitchAxis = motor.transform.right;
             }
+            pitchAxis.Normalize();
 
-            Vector3 groundNormal = Vector3.up;
-            Vector3 desiredPlanarForward = Vector3.ProjectOnPlane(
-                character.MotorBody.transform.forward * forwardSign,
-                groundNormal);
-            if (desiredPlanarForward.sqrMagnitude < 0.000001f)
-            {
-                return;
-            }
-
-            float pitchRadians = pitchDegrees * Mathf.Deg2Rad;
-            Vector3 desiredForward =
-                desiredPlanarForward.normalized * Mathf.Cos(pitchRadians) +
-                groundNormal * Mathf.Sin(pitchRadians);
-
-            Quaternion fullCorrection = Quaternion.FromToRotation(
-                currentForward.normalized,
-                desiredForward.normalized);
-            Quaternion targetRotation = fullCorrection * foot.rotation;
+            Quaternion toePitch = Quaternion.AngleAxis(-pitchDegrees, pitchAxis);
+            Quaternion targetRotation = toePitch * slopeAlignedRotation;
             foot.rotation = Quaternion.Slerp(
                 foot.rotation,
                 targetRotation,
                 correctionStrength);
         }
 
+        private Vector3 SampleGroundNormal(Vector3 footPosition)
+        {
+            Vector3 origin = footPosition + Vector3.up * groundProbeHeight;
+            int hitCount = Physics.RaycastNonAlloc(
+                origin,
+                Vector3.down,
+                groundHits,
+                groundProbeHeight + groundProbeDistance,
+                groundLayers,
+                QueryTriggerInteraction.Ignore);
+
+            float nearestDistance = float.PositiveInfinity;
+            Vector3 nearestNormal = Vector3.up;
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = groundHits[i];
+                if (hit.collider == null || hit.collider.transform.IsChildOf(transform))
+                {
+                    continue;
+                }
+
+                if (hit.distance < nearestDistance)
+                {
+                    nearestDistance = hit.distance;
+                    nearestNormal = hit.normal;
+                }
+            }
+
+            return nearestNormal.sqrMagnitude > 0.000001f
+                ? nearestNormal.normalized
+                : Vector3.up;
+        }
+
 #if UNITY_EDITOR
         private void OnValidate()
         {
-            plantedToePitchDegrees = Mathf.Clamp(plantedToePitchDegrees, -20f, 20f);
-            movingToePitchExtraDegrees = Mathf.Clamp(movingToePitchExtraDegrees, 0f, 15f);
+            plantedToePitchDegrees = Mathf.Clamp(plantedToePitchDegrees, -15f, 15f);
+            movingToePitchExtraDegrees = Mathf.Clamp(movingToePitchExtraDegrees, 0f, 10f);
             correctionStrength = Mathf.Clamp01(correctionStrength);
             referenceSpeed = Mathf.Max(0.1f, referenceSpeed);
+            groundProbeHeight = Mathf.Max(0.05f, groundProbeHeight);
+            groundProbeDistance = Mathf.Max(0.05f, groundProbeDistance);
         }
 #endif
     }
