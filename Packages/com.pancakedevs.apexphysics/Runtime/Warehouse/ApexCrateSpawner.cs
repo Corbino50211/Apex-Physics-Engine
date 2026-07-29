@@ -23,6 +23,10 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private bool spawnAsChildren;
         [SerializeField] private Transform parentOverride;
 
+        [Header("Editor Preview")]
+        [SerializeField] private bool showVoidPreview = true;
+        [SerializeField] private bool previewOnlyWhenSelected;
+
         [Header("Lifetime")]
         [SerializeField] private bool spawnOnce = true;
         [SerializeField] private bool clearPreviousBeforeSpawn = true;
@@ -36,6 +40,10 @@ namespace PancakeDevs.ApexPhysics
         public ApexCrateSpawnTiming SpawnTiming => spawnTiming;
         public IReadOnlyList<GameObject> SpawnedInstances => spawnedInstances;
         public bool HasSpawned => hasSpawned;
+        public int SpawnCount => Mathf.Max(1, spawnCount);
+        public Vector3 PositionStep => positionStep;
+        public bool ShowVoidPreview => showVoidPreview;
+        public bool PreviewOnlyWhenSelected => previewOnlyWhenSelected;
 
         private void Awake()
         {
@@ -70,6 +78,11 @@ namespace PancakeDevs.ApexPhysics
         {
             barcode = newBarcode;
             crate = null;
+        }
+
+        public void SetVoidPreviewVisible(bool visible)
+        {
+            showVoidPreview = visible;
         }
 
         public ApexSpawnableCrate ResolveCrate()
