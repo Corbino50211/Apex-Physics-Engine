@@ -1,6 +1,6 @@
 # Apex Warehouse and Crates
 
-Apex Physics Engine 0.0.9 introduces a barcode-driven content system for reusable gameplay prefabs.
+Apex Physics Engine uses a barcode-driven content system for reusable gameplay prefabs.
 
 The goal is to let a level store lightweight spawn instructions while the actual prefab content lives in reusable crate assets.
 
@@ -87,6 +87,31 @@ Available timings:
 
 A spawner can create multiple copies using **Spawn Count** and **Position Step**.
 
+## Void crate previews
+
+Apex 0.3.2 displays the model represented by a Spawnable Crate before Play Mode.
+
+- Selecting a Spawnable Crate shows a rotatable Void Preview in the Inspector.
+- Selecting a Crate Spawner shows the same preview in its Inspector.
+- Scene-view spawners draw the actual prefab meshes with the Apex Void Preview material.
+- Spawn Count and Position Step are represented by multiple preview models.
+- Preview rendering does not instantiate the gameplay prefab or execute its scripts.
+
+A Spawnable Crate uses its normal prefab as the preview model by default. Use these fields when a prefab needs a cleaner authoring preview:
+
+- **Preview Prefab** — optional simplified model.
+- **Preview Material** — optional custom material or Shader Graph material.
+- **Preview Local Offset** — fixes unusual prefab pivots.
+- **Preview Local Euler** — rotates the preview without changing the spawned object.
+- **Preview Scale** — changes only the displayed preview size.
+
+Spawner controls:
+
+- **Show Void Preview** — enables or disables the Scene-view model.
+- **Preview Only When Selected** — hides the model until the spawner is selected.
+
+The package default uses the dependency-free **Apex Void Preview** shader. Click **Create Editable Void Material** in the crate Inspector to save a customizable material beside the crate asset. A project-authored Shader Graph material can also be assigned through **Preview Material**.
+
 ## Runtime API
 
 Spawn directly from a crate:
@@ -133,4 +158,4 @@ Validation reports:
 
 ## Current scope
 
-Version 0.0.9 uses direct Unity prefab references. Future warehouse adapters can add Addressables, asset bundles, mod pallets, asynchronous loading, dependency tracking, and network spawn registration without changing the crate barcode API.
+The current Warehouse uses direct Unity prefab references. Future warehouse adapters can add Addressables, asset bundles, mod pallets, asynchronous loading, dependency tracking, and network spawn registration without changing the crate barcode API.
