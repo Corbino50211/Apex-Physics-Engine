@@ -14,6 +14,9 @@ namespace PancakeDevs.ApexPhysics.Editor
 
             ApexDestructible destructible = (ApexDestructible)target;
             EditorGUILayout.Space();
+            DrawTriggerExplanation(destructible);
+
+            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Generated Fracture", EditorStyles.boldLabel);
 
             if (destructible.HasGeneratedFracture)
@@ -78,10 +81,14 @@ namespace PancakeDevs.ApexPhysics.Editor
                 {
                     if (GUILayout.Button("Break At Center"))
                     {
+                        float testImpulse = destructible.ThresholdMeasurement ==
+                                            ApexImpactThresholdMeasurement.EstimatedForce
+                            ? destructible.BreakThreshold * Mathf.Max(0.0001f, Time.fixedDeltaTime)
+                            : destructible.BreakThreshold;
                         destructible.BreakAt(
                             destructible.transform.position,
                             Vector3.up,
-                            destructible.BreakImpulse);
+                            testImpulse);
                     }
 
                     if (GUILayout.Button("Break All"))
@@ -90,6 +97,25 @@ namespace PancakeDevs.ApexPhysics.Editor
                     }
                 }
             }
+        }
+
+        private static void DrawTriggerExplanation(ApexDestructible destructible)
+        {
+            if (destructible.FractureTrigger == ApexFractureTrigger.ManualOnly)
+            {
+                EditorGUILayout.HelpBox(
+                    "Fracture geometry is generated in Edit Mode. Runtime activation is Manual Only, so collisions will not break this object. Use BreakAt, BreakAll, a UnityEvent, or the Play Mode test buttons.",
+                    MessageType.Info);
+                return;
+            }
+
+            string unit = destructible.ThresholdMeasurement ==
+                          ApexImpactThresholdMeasurement.EstimatedForce
+                ? "newtons (estimated as collision impulse / Fixed Timestep)"
+                : "newton-seconds of collision impulse";
+            EditorGUILayout.HelpBox(
+                $"Fracture geometry is generated in Edit Mode. During Play Mode this object automatically fractures when an impact reaches {destructible.BreakThreshold:0.###} {unit}.",
+                MessageType.Info);
         }
     }
 }
