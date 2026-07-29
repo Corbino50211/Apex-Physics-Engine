@@ -161,6 +161,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                     chunk.EditorConfigureGeneratedChunk(destructible);
                     meshRenderer.enabled = false;
                     chunkBody.isKinematic = true;
+                    chunkBody.useGravity = false;
                     chunkBody.detectCollisions = false;
                     chunks.Add(chunk);
                 }
@@ -282,7 +283,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             float volume = Mathf.Max(0.000001f, BoundsVolume(mesh.bounds));
             float sourceMass = source != null ? Mathf.Max(0.01f, source.mass) : 1f;
             chunk.mass = Mathf.Max(0.01f, sourceMass * (volume / Mathf.Max(0.000001f, totalVolume)));
-            chunk.useGravity = source == null || source.useGravity;
+            chunk.useGravity = false;
             chunk.interpolation = source != null
                 ? source.interpolation
                 : RigidbodyInterpolation.Interpolate;
