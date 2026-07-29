@@ -9,8 +9,6 @@ namespace PancakeDevs.ApexPhysics.Editor
     {
         private const string CreatePath =
             "Apex Physics Engine/Player/Create Apex Physical OpenXR Rig";
-        private const string BindHumanoidPath =
-            "Apex Physics Engine/Player/Bind Selected Humanoid to Physical OpenXR Rig";
 
         [MenuItem(CreatePath, false, 120)]
         private static void CreatePhysicalOpenXRRig()
@@ -100,135 +98,6 @@ namespace PancakeDevs.ApexPhysics.Editor
                 root);
         }
 
-        [MenuItem(BindHumanoidPath, false, 121)]
-        private static void BindSelectedHumanoid()
-        {
-            GameObject selected = Selection.activeGameObject;
-            if (selected == null)
-            {
-                EditorUtility.DisplayDialog(
-                    "No Humanoid Selected",
-                    "Drag the Humanoid model into the scene, select its root in the Hierarchy, then run this command again.",
-                    "OK");
-                return;
-            }
-
-            Animator animator = selected.GetComponentInChildren<Animator>(true);
-            if (animator == null || !animator.isHuman || animator.avatar == null || !animator.avatar.isValid)
-            {
-                EditorUtility.DisplayDialog(
-                    "Valid Humanoid Animator Required",
-                    "The selected Hierarchy object needs a valid Humanoid Animator and Avatar. Set the FBX Rig type to Humanoid and press Apply.",
-                    "OK");
-                return;
-            }
-
-            ApexPhysicalOpenXRBody physicalBody = Object.FindFirstObjectByType<ApexPhysicalOpenXRBody>(
-                FindObjectsInactive.Include);
-            if (physicalBody == null)
-            {
-                EditorUtility.DisplayDialog(
-                    "Physical OpenXR Rig Not Found",
-                    "Create an Apex Physical OpenXR Rig before binding the avatar.",
-                    "OK");
-                return;
-            }
-
-            ApexPhysicalOpenXRHand[] hands = Object.FindObjectsByType<ApexPhysicalOpenXRHand>(
-                FindObjectsInactive.Include,
-                FindObjectsSortMode.None);
-            ApexPhysicalOpenXRHand leftHand = null;
-            ApexPhysicalOpenXRHand rightHand = null;
-
-            for (int i = 0; i < hands.Length; i++)
-            {
-                ApexPhysicalOpenXRHand hand = hands[i];
-                if (hand == null || !hand.transform.IsChildOf(physicalBody.transform))
-                {
-                    continue;
-                }
-
-                string lowerName = hand.name.ToLowerInvariant();
-                if (lowerName.Contains("left"))
-                {
-                    leftHand = hand;
-                }
-                else if (lowerName.Contains("right"))
-                {
-                    rightHand = hand;
-                }
-            }
-
-            if (leftHand == null || rightHand == null || physicalBody.Head == null)
-            {
-                EditorUtility.DisplayDialog(
-                    "Rig References Missing",
-                    "Apex could not find the tracked head and both physical hands under the OpenXR rig.",
-                    "OK");
-                return;
-            }
-
-            int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("Bind Humanoid to Apex Physical VR Rig");
-
-            Undo.SetTransformParent(selected.transform, physicalBody.transform, "Parent Apex VR Avatar");
-            selected.transform.localPosition = Vector3.zero;
-            selected.transform.localRotation = Quaternion.identity;
-
-            ApexPhysicalVRAvatar avatar = selected.GetComponent<ApexPhysicalVRAvatar>();
-            if (avatar == null)
-            {
-                avatar = Undo.AddComponent<ApexPhysicalVRAvatar>(selected);
-            }
-
-            avatar.EditorConfigure(
-                animator,
-                physicalBody,
-                physicalBody.Head,
-                leftHand.transform,
-                rightHand.transform);
-
-            DisableDebugHandVisuals(leftHand);
-            DisableDebugHandVisuals(rightHand);
-
-            EditorUtility.SetDirty(selected);
-            EditorUtility.SetDirty(avatar);
-            EditorSceneManager.MarkSceneDirty(selected.scene);
-            Selection.activeGameObject = selected;
-            Undo.CollapseUndoOperations(undoGroup);
-
-            Debug.Log(
-                "Bound the selected Humanoid avatar to the Apex Physical OpenXR rig.",
-                selected);
-        }
-
-        [MenuItem(BindHumanoidPath, true)]
-        private static bool ValidateBindSelectedHumanoid()
-        {
-            return Selection.activeGameObject != null;
-        }
-
-        private static void DisableDebugHandVisuals(ApexPhysicalOpenXRHand hand)
-        {
-            Renderer[] renderers = hand.GetComponentsInChildren<Renderer>(true);
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                Renderer renderer = renderers[i];
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                string lowerName = renderer.name.ToLowerInvariant();
-                if (lowerName.Contains("visual") || lowerName.Contains("sphere") || lowerName.Contains("debug"))
-                {
-                    Undo.RecordObject(renderer, "Hide Apex Debug Hand Visual");
-                    renderer.enabled = false;
-                    EditorUtility.SetDirty(renderer);
-                }
-            }
-        }
-
         private static Transform CreateTrackedTarget(
             Transform parent,
             string name,
@@ -260,7 +129,7 @@ namespace PancakeDevs.ApexPhysics.Editor
             rigidbody.mass = 1.2f;
             rigidbody.useGravity = false;
             rigidbody.isKinematic = false;
-            rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+            rigidbody.interpolation = RigidbodyInterpolation.None;
             rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             rigidbody.linearDamping = 0.2f;
             rigidbody.angularDamping = 0.2f;
