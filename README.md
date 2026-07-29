@@ -6,10 +6,10 @@ By [PancakeDevs](https://github.com/Corbino50211).
 > Make Everything Physical.
 
 ![Unity 6000.0+](https://img.shields.io/badge/Unity-6000.0%2B-black)
-![Version 0.3.10](https://img.shields.io/badge/version-0.3.10-blue)
+![Version 0.3.12](https://img.shields.io/badge/version-0.3.12-blue)
 ![Status: Active Development](https://img.shields.io/badge/status-active%20development-orange)
 
-Apex turns animated humanoids into fully simulated characters that walk with real forces, plant their feet on real ground, fall into momentum-preserving ragdolls, and get back up on their own. Everything ships as modular components you drop onto existing prefabs — no scene manager, no framework lock-in, no render pipeline or networking dependency.
+Apex turns animated humanoids into grounded PC physical characters with motor-driven locomotion, procedural foot planting, momentum-preserving ragdolls, and automatic get-up recovery. Everything ships as modular components you drop onto existing prefabs — no scene manager, no framework lock-in, no render pipeline or networking dependency.
 
 ---
 
@@ -20,7 +20,7 @@ Apex is in active development at `0.3.x`. The API is usable but not frozen; mino
 | Module | What it does |
 | --- | --- |
 | **Core** | `ApexBody` Rigidbody wrapper, reusable `ApexPhysicsProfile` assets, universal impact events |
-| **Characters** | Physical humanoids, procedural gait, toe-bone-aware foot planting, torso harness, support rig |
+| **Characters** | PC physical humanoids, embedded character motor, natural procedural gait, planted feet, single-owner foot orientation |
 | **Ragdoll** | Active ragdolls, momentum transfer on knockdown, automatic get-up recovery |
 | **Navigation** | NPC brain with Idle/Wander/Chase modes, motor-driven NavMesh movement, auto-baking |
 | **Interaction** | Force-driven grabbers, grabbables, authored grab points and poses |
@@ -76,9 +76,9 @@ The object now has profile-driven Rigidbody settings, safe force helpers, veloci
 3. Bake a NavMesh, or use **Apex Physics Engine → Navigation → Create Navigation Surface**.
 4. Press Play.
 
-The character walks under motor forces, plants its feet against the ground, ragdolls on hard impacts, and stands back up.
+The character moves through an embedded Rigidbody motor, plants its feet against the ground, ragdolls on hard impacts, and stands back up automatically.
 
-> The source avatar must map **Left Toes** and **Right Toes** for automatic foot-axis detection. Rebuild existing NPCs once after updating Apex.
+> Apex 0.3.12 does not require Humanoid toe-bone mappings for final foot orientation. The system preserves each avatar's original foot rotation, aligns it to the floor, and applies one controlled toe-up pitch.
 
 ---
 
