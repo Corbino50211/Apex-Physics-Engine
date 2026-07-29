@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.9.8",
+  "version": "1.0.0",
   "displayName": "Apex Physics Engine",
-  "description": "A Unity physics framework with a custom physical OpenXR player rig, guarded Humanoid scene-instance binding, Humanoid avatar runtime metadata, headset-driven body posing, stabilized physical VR grabbing, low-latency physical hands, arm reach limits, Rigidbody locomotion, room-scale recentering, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
+  "description": "A Unity physics framework with a custom physical OpenXR player rig, guarded Humanoid scene-instance binding, procedural grounded VR legs, pelvis following, knee solving, crouch support, slope-aligned feet, headset-driven body posing, stabilized physical VR grabbing, low-latency physical hands, arm reach limits, Rigidbody locomotion, room-scale recentering, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9",
@@ -24,6 +24,10 @@
     "humanoid-avatar",
     "full-body-avatar",
     "arm-ik",
+    "leg-ik",
+    "procedural-walking",
+    "foot-placement",
+    "grounded-feet",
     "physical-hands",
     "low-latency-hands",
     "stable-grabbing",
