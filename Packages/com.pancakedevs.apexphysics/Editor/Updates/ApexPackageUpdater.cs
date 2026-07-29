@@ -379,7 +379,8 @@ namespace PancakeDevs.ApexPhysics.Editor
 
         private static string ResolveInstalledVersion()
         {
-            PackageInfo package = PackageInfo.FindForAssetPath(PackageAssetPath);
+            UnityEditor.PackageManager.PackageInfo package =
+                UnityEditor.PackageManager.PackageInfo.FindForAssetPath(PackageAssetPath);
             return package != null && !string.IsNullOrWhiteSpace(package.version)
                 ? package.version
                 : "0.0.0";
