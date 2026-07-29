@@ -4,10 +4,11 @@ using UnityEngine;
 namespace PancakeDevs.ApexPhysics
 {
     /// <summary>
-    /// Prevents Valve Interaction System hand colliders, Apex hand proxies, and the
-    /// Apex player capsule from colliding with each other. SteamVR already owns its
-    /// tracked-hand contact model, so duplicate self-collisions create feedback,
-    /// rig jitter, and continuous controller haptics.
+    /// Keeps Valve's Interaction System Player authoritative for SteamVR tracking.
+    /// A dynamic Rigidbody parent around Valve's tracked-space prefab creates a feedback
+    /// loop: tracked motion changes the capsule, physics moves the parent, and the tracked
+    /// camera/hands are displaced again. That can launch the rig and make the controllers
+    /// flicker or vibrate continuously.
     /// </summary>
     internal static class ApexSteamVRCollisionGuard
     {
@@ -31,9 +32,37 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            Collider bodyCollider = rig.GetComponent<Collider>();
-            List<Collider> valveHandColliders = new List<Collider>();
+            // Valve owns the SteamVR tracking origin. Apex Rigidbody locomotion is disabled
+            // until a backend-specific movement bridge can move Valve's Player safely.
+            ApexVRPlayerMotor motor = rig.GetComponent<ApexVRPlayerMotor>();
+            if (motor != null)
+            {
+                motor.ClearInput();
+                motor.enabled = false;
+            }
 
+            ApexVRInput input = rig.GetComponent<ApexVRInput>();
+            if (input != null)
+            {
+                input.enabled = false;
+            }
+
+            CapsuleCollider bodyCollider = rig.GetComponent<CapsuleCollider>();
+            if (bodyCollider != null)
+            {
+                bodyCollider.enabled = false;
+            }
+
+            Rigidbody body = rig.GetComponent<Rigidbody>();
+            if (body != null)
+            {
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+                body.useGravity = false;
+                body.isKinematic = true;
+            }
+
+            List<Collider> valveHandColliders = new List<Collider>();
             CollectAndDisableApexProxy(rig.LeftHand, bodyCollider, valveHandColliders);
             CollectAndDisableApexProxy(rig.RightHand, bodyCollider, valveHandColliders);
 
@@ -80,6 +109,15 @@ namespace PancakeDevs.ApexPhysics
                 }
 
                 apexProxyCollider.enabled = false;
+            }
+
+            Rigidbody proxyBody = apexHand.GetComponent<Rigidbody>();
+            if (proxyBody != null)
+            {
+                proxyBody.linearVelocity = Vector3.zero;
+                proxyBody.angularVelocity = Vector3.zero;
+                proxyBody.useGravity = false;
+                proxyBody.isKinematic = true;
             }
 
             Transform valveHand = apexHand.TrackingTarget;
