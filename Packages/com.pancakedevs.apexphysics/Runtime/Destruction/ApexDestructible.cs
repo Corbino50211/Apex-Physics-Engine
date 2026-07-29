@@ -1,18 +1,39 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace PancakeDevs.ApexPhysics
 {
+    public enum ApexFractureTrigger
+    {
+        ManualOnly = 0,
+        ImpactThreshold = 1
+    }
+
+    public enum ApexImpactThresholdMeasurement
+    {
+        CollisionImpulse = 0,
+        EstimatedForce = 1
+    }
+
     /// <summary>
-    /// Swaps an intact object to editor-generated fracture chunks when an impact exceeds
-    /// the configured threshold. Nearby chunks are released first while the remaining
-    /// visible chunks stay kinematic until later impacts reach them.
+    /// Swaps an intact object to editor-generated fracture chunks. Runtime activation can
+    /// be manual-only or automatic when a collision exceeds a configured threshold.
+    /// Nearby chunks are released first while remaining visible chunks stay kinematic
+    /// until later impacts reach them.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class ApexDestructible : MonoBehaviour
     {
+        [Header("Runtime Fracture Trigger")]
+        [SerializeField] private ApexFractureTrigger fractureTrigger =
+            ApexFractureTrigger.ImpactThreshold;
+        [SerializeField] private ApexImpactThresholdMeasurement thresholdMeasurement =
+            ApexImpactThresholdMeasurement.CollisionImpulse;
+        [FormerlySerializedAs("breakImpulse")]
+        [SerializeField, Min(0f)] private float breakThreshold = 8f;
+
         [Header("Break Settings")]
-        [SerializeField, Min(0f)] private float breakImpulse = 8f;
         [SerializeField, Min(0.01f)] private float impactRadius = 0.8f;
         [SerializeField] private bool breakAllAtOnce;
         [SerializeField, Min(0f)] private float secondaryBreakImpulse = 3f;
@@ -28,9 +49,12 @@ namespace PancakeDevs.ApexPhysics
 
         [SerializeField, HideInInspector] private ApexBody apexBody;
         [SerializeField, HideInInspector] private Transform generatedChunksRoot;
-        [SerializeField, HideInInspector] private ApexDestructibleChunk[] chunks = Array.Empty<ApexDestructibleChunk>();
-        [SerializeField, HideInInspector] private Renderer[] intactRenderers = Array.Empty<Renderer>();
-        [SerializeField, HideInInspector] private Collider[] intactColliders = Array.Empty<Collider>();
+        [SerializeField, HideInInspector] private ApexDestructibleChunk[] chunks =
+            Array.Empty<ApexDestructibleChunk>();
+        [SerializeField, HideInInspector] private Renderer[] intactRenderers =
+            Array.Empty<Renderer>();
+        [SerializeField, HideInInspector] private Collider[] intactColliders =
+            Array.Empty<Collider>();
         [SerializeField, HideInInspector] private string generatedAssetFolder = string.Empty;
 
         private Rigidbody sourceBody;
@@ -42,8 +66,13 @@ namespace PancakeDevs.ApexPhysics
         public event Action<ApexDestructible> Fractured;
         public event Action<ApexDestructibleChunk> ChunkReleased;
 
+        public ApexFractureTrigger FractureTrigger => fractureTrigger;
+        public ApexImpactThresholdMeasurement ThresholdMeasurement => thresholdMeasurement;
+        public float BreakThreshold => breakThreshold;
+        public float BreakImpulse => breakThreshold;
         public bool IsFractured => fractured;
-        public bool HasGeneratedFracture => generatedChunksRoot != null && chunks != null && chunks.Length > 0;
+        public bool HasGeneratedFracture =>
+            generatedChunksRoot != null && chunks != null && chunks.Length > 0;
         public int ChunkCount => chunks != null ? chunks.Length : 0;
         public int ReleasedChunkCount
         {
@@ -67,7 +96,6 @@ namespace PancakeDevs.ApexPhysics
             }
         }
 
-        public float BreakImpulse => breakImpulse;
         public float ImpactRadius => impactRadius;
         public Transform GeneratedChunksRoot => generatedChunksRoot;
         public string GeneratedAssetFolder => generatedAssetFolder;
@@ -102,13 +130,14 @@ namespace PancakeDevs.ApexPhysics
 
         private void OnCollisionEnter(Collision collision)
         {
-            if (apexBody != null || fractured || collision == null)
+            if (apexBody != null || fractured || collision == null ||
+                fractureTrigger != ApexFractureTrigger.ImpactThreshold)
             {
                 return;
             }
 
             float impulse = collision.impulse.magnitude;
-            if (impulse < breakImpulse)
+            if (!ThresholdReached(impulse))
             {
                 return;
             }
@@ -126,10 +155,13 @@ namespace PancakeDevs.ApexPhysics
         }
 
         /// <summary>
-        /// Breaks the object near a world-space impact point. The impulse direction should
-        /// point from the impact into the destructible object.
+        /// Breaks the object near a world-space point regardless of the configured runtime
+        /// trigger. The impulse direction should point from the impact into the object.
         /// </summary>
-        public void BreakAt(Vector3 worldPoint, Vector3 impulseDirection, float impulseMagnitude)
+        public void BreakAt(
+            Vector3 worldPoint,
+            Vector3 impulseDirection,
+            float impulseMagnitude)
         {
             if (!HasGeneratedFracture)
             {
@@ -140,9 +172,14 @@ namespace PancakeDevs.ApexPhysics
             }
 
             BeginFracture();
-            ReleaseChunksNear(worldPoint, impulseDirection, impulseMagnitude, impactRadius);
+            ReleaseChunksNear(
+                worldPoint,
+                impulseDirection,
+                Mathf.Max(0f, impulseMagnitude),
+                impactRadius);
         }
 
+        /// <summary>Releases every generated chunk regardless of trigger mode.</summary>
         public void BreakAll()
         {
             if (!HasGeneratedFracture)
@@ -157,7 +194,11 @@ namespace PancakeDevs.ApexPhysics
             Vector3 point = generatedChunksRoot != null
                 ? generatedChunksRoot.position
                 : transform.position;
-            ReleaseChunksNear(point, Vector3.up, breakImpulse, float.PositiveInfinity);
+            ReleaseChunksNear(
+                point,
+                Vector3.up,
+                ResolveManualBreakImpulse(),
+                float.PositiveInfinity);
         }
 
         internal void HandleChunkCollision(
@@ -204,7 +245,8 @@ namespace PancakeDevs.ApexPhysics
 
         private void HandleApexImpact(ApexImpactInfo impact)
         {
-            if (fractured || impact.Impulse < breakImpulse)
+            if (fractured || fractureTrigger != ApexFractureTrigger.ImpactThreshold ||
+                !ThresholdReached(impact.Impulse))
             {
                 return;
             }
@@ -213,6 +255,33 @@ namespace PancakeDevs.ApexPhysics
                 ? -impact.RelativeVelocity.normalized
                 : -impact.Normal;
             BreakAt(impact.Point, direction, impact.Impulse);
+        }
+
+        private bool ThresholdReached(float collisionImpulse)
+        {
+            return MeasureThresholdValue(collisionImpulse) >= breakThreshold;
+        }
+
+        private float MeasureThresholdValue(float collisionImpulse)
+        {
+            float impulse = Mathf.Max(0f, collisionImpulse);
+            if (thresholdMeasurement == ApexImpactThresholdMeasurement.EstimatedForce)
+            {
+                float step = Mathf.Max(0.0001f, Time.fixedDeltaTime);
+                return impulse / step;
+            }
+
+            return impulse;
+        }
+
+        private float ResolveManualBreakImpulse()
+        {
+            if (thresholdMeasurement == ApexImpactThresholdMeasurement.EstimatedForce)
+            {
+                return breakThreshold * Mathf.Max(0.0001f, Time.fixedDeltaTime);
+            }
+
+            return breakThreshold;
         }
 
         private void BeginFracture()
@@ -424,11 +493,13 @@ namespace PancakeDevs.ApexPhysics
 
         private void OnValidate()
         {
-            breakImpulse = Mathf.Max(0f, breakImpulse);
+            breakThreshold = Mathf.Max(0f, breakThreshold);
             impactRadius = Mathf.Max(0.01f, impactRadius);
             secondaryBreakImpulse = Mathf.Max(0f, secondaryBreakImpulse);
             outwardImpulseMultiplier = Mathf.Max(0f, outwardImpulseMultiplier);
-            inheritedAngularVelocityMultiplier = Mathf.Max(0f, inheritedAngularVelocityMultiplier);
+            inheritedAngularVelocityMultiplier = Mathf.Max(
+                0f,
+                inheritedAngularVelocityMultiplier);
             debrisLifetime = Mathf.Max(0.1f, debrisLifetime);
             CacheReferences();
         }
