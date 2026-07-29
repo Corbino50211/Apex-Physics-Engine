@@ -2,6 +2,24 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.7] - 2026-07-28
+
+### Fixed
+
+- Added per-foot visual sole calibration from the generated physical foot collider.
+- Shoes and boots that extend below the Humanoid foot bone now receive enough lift to rest their visible sole on the floor.
+- Existing 0.3.6 characters automatically migrate to the new sole-clearance defaults.
+
+### Changed
+
+- Maximum supported visual sole depth is increased to `0.12` metres for oversized footwear and stylized models.
+- Foot targets combine leg-proportion estimation, physical foot-collider depth, and a small visual contact lift.
+
+### Notes
+
+- Existing NPCs should be rebuilt once after updating.
+- Unity compilation and Play Mode behavior still require confirmation in the Unity 6.2 Windows test project.
+
 ## [0.3.6] - 2026-07-28
 
 ### Fixed
