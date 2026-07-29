@@ -25,11 +25,13 @@ Or add `ApexWaterVolume` to an upright GameObject with a `MeshFilter` and `MeshR
 
 The inspector can:
 
-- Capture the logical volume bounds from the current mesh.
+- Capture the logical volume bounds from the current mesh before surface generation.
 - Generate and save a low-poly surface mesh under `Assets/Apex Generated/Water/`.
 - Create a default water material.
 - Apply wave and rendering properties using a `MaterialPropertyBlock`.
 - Clear generated assets without removing the logical water component.
+
+After the thin generated surface is assigned, logical-bound recapture is disabled to prevent the authored water depth from collapsing to the surface mesh. Set the volume fields directly or reassign the original source mesh before recapturing.
 
 Water volumes should remain upright. Y-axis rotation is supported; X/Z tilt can make the horizontal physics surface disagree with the rendered mesh.
 
@@ -83,6 +85,8 @@ Or use:
 ```csharp
 swimmer.SetInput(movement, vertical, sprint);
 ```
+
+The **Create Example Setup** command adds an input-agnostic swimmer and does not add a legacy input component. Connect your own Input System actions before expecting that example character to move.
 
 The optional `ApexLegacySwimInput` component is only for quick testing when the Legacy Input Manager is enabled.
 
