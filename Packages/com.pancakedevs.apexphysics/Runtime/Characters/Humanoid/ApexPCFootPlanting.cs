@@ -13,6 +13,8 @@ namespace PancakeDevs.ApexPhysics
     [AddComponentMenu("")]
     public sealed class ApexPCFootPlanting : MonoBehaviour
     {
+        private const int CurrentSettingsVersion = 1;
+
         private sealed class LegState
         {
             public Transform upperLeg;
@@ -22,6 +24,7 @@ namespace PancakeDevs.ApexPhysics
             public float lowerLength;
             public float lateralOffset;
             public float forwardOffset;
+            public float colliderSoleOffset;
             public float soleOffset;
             public Quaternion footRotationOffset;
             public Vector3 plantedPosition;
@@ -40,10 +43,11 @@ namespace PancakeDevs.ApexPhysics
         [Header("Grounding")]
         [SerializeField, Min(0.05f)] private float groundProbeHeight = 0.8f;
         [SerializeField, Min(0.05f)] private float groundProbeDistance = 1.6f;
-        [SerializeField, Min(0f)] private float additionalSoleClearance = 0.01f;
+        [SerializeField, Min(0f)] private float additionalSoleClearance = 0.012f;
+        [SerializeField, Min(0f)] private float visualSoleLift = 0.012f;
         [SerializeField, Range(0.03f, 0.2f)] private float soleHeightRatio = 0.08f;
         [SerializeField, Min(0f)] private float minimumSoleHeight = 0.025f;
-        [SerializeField, Min(0f)] private float maximumSoleHeight = 0.09f;
+        [SerializeField, Min(0f)] private float maximumSoleHeight = 0.12f;
         [SerializeField, Min(0f)] private float maximumHipsCorrection = 0.45f;
         [SerializeField, Min(0f)] private float hipsHeightFollowSpeed = 8f;
         [SerializeField] private LayerMask groundLayers = ~0;
@@ -58,6 +62,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField, Range(0f, 1f)] private float nextStepOverlap = 0.58f;
         [SerializeField, Min(0f)] private float minimumMovingSpeed = 0.08f;
         [SerializeField, Min(0f)] private float teleportResetDistance = 1.2f;
+        [SerializeField, HideInInspector] private int settingsVersion;
 
         private readonly LegState leftLeg = new LegState();
         private readonly LegState rightLeg = new LegState();
@@ -78,11 +83,13 @@ namespace PancakeDevs.ApexPhysics
 
         private void Awake()
         {
+            ApplyVersionedDefaults();
             Configure(character != null ? character : GetComponent<ApexPCPhysicalCharacter>());
         }
 
         private void OnEnable()
         {
+            ApplyVersionedDefaults();
             ResolveReferences();
             Subscribe();
         }
@@ -158,6 +165,7 @@ namespace PancakeDevs.ApexPhysics
 
         public void Configure(ApexPCPhysicalCharacter owner)
         {
+            ApplyVersionedDefaults();
             Unsubscribe();
             character = owner;
             targetAnimator = owner != null && owner.Humanoid != null
@@ -255,6 +263,7 @@ namespace PancakeDevs.ApexPhysics
             HumanBodyBones footRole)
         {
             leg.valid = false;
+            leg.colliderSoleOffset = 0f;
             if (targetAnimator == null || !targetAnimator.isHuman)
             {
                 return;
@@ -270,7 +279,52 @@ namespace PancakeDevs.ApexPhysics
 
             leg.upperLength = Vector3.Distance(leg.upperLeg.position, leg.lowerLeg.position);
             leg.lowerLength = Vector3.Distance(leg.lowerLeg.position, leg.foot.position);
+            leg.colliderSoleOffset = ResolvePhysicalFootSoleOffset(footRole);
             leg.valid = leg.upperLength > 0.01f && leg.lowerLength > 0.01f;
+        }
+
+        private float ResolvePhysicalFootSoleOffset(HumanBodyBones footRole)
+        {
+            if (character == null || character.Humanoid == null ||
+                character.Humanoid.PhysicalCharacter == null)
+            {
+                return 0f;
+            }
+
+            Animator physicalAnimator =
+                character.Humanoid.PhysicalCharacter.GetComponentInChildren<Animator>(true);
+            if (physicalAnimator == null || !physicalAnimator.isHuman)
+            {
+                return 0f;
+            }
+
+            Transform physicalFoot = physicalAnimator.GetBoneTransform(footRole);
+            if (physicalFoot == null)
+            {
+                return 0f;
+            }
+
+            Collider[] footColliders = physicalFoot.GetComponents<Collider>();
+            float greatestOffset = 0f;
+            for (int i = 0; i < footColliders.Length; i++)
+            {
+                Collider footCollider = footColliders[i];
+                if (footCollider == null || footCollider.isTrigger)
+                {
+                    continue;
+                }
+
+                Bounds bounds = footCollider.bounds;
+                if (bounds.size.sqrMagnitude < 0.000001f)
+                {
+                    continue;
+                }
+
+                float offset = physicalFoot.position.y - bounds.min.y;
+                greatestOffset = Mathf.Max(greatestOffset, offset);
+            }
+
+            return Mathf.Clamp(greatestOffset, 0f, maximumSoleHeight);
         }
 
         private bool InitializeFeet()
@@ -372,8 +426,12 @@ namespace PancakeDevs.ApexPhysics
 
         private float EstimateSoleOffset(LegState leg)
         {
-            float estimated = leg.lowerLength * soleHeightRatio;
-            return Mathf.Clamp(estimated, minimumSoleHeight, maximumSoleHeight);
+            float proportionEstimate = leg.lowerLength * soleHeightRatio;
+            float estimated = Mathf.Max(proportionEstimate, leg.colliderSoleOffset);
+            return Mathf.Clamp(
+                estimated + visualSoleLift,
+                minimumSoleHeight,
+                maximumSoleHeight);
         }
 
         private void ResolveDesiredGroundPoint(
@@ -647,6 +705,19 @@ namespace PancakeDevs.ApexPhysics
             subscribed = false;
         }
 
+        private void ApplyVersionedDefaults()
+        {
+            if (settingsVersion >= CurrentSettingsVersion)
+            {
+                return;
+            }
+
+            additionalSoleClearance = Mathf.Max(additionalSoleClearance, 0.012f);
+            visualSoleLift = Mathf.Max(visualSoleLift, 0.012f);
+            maximumSoleHeight = Mathf.Max(maximumSoleHeight, 0.12f);
+            settingsVersion = CurrentSettingsVersion;
+        }
+
         private static float PlanarDistance(Vector3 first, Vector3 second)
         {
             return Vector3.ProjectOnPlane(first - second, Vector3.up).magnitude;
@@ -655,9 +726,11 @@ namespace PancakeDevs.ApexPhysics
 #if UNITY_EDITOR
         private void OnValidate()
         {
+            ApplyVersionedDefaults();
             groundProbeHeight = Mathf.Max(0.05f, groundProbeHeight);
             groundProbeDistance = Mathf.Max(0.05f, groundProbeDistance);
             additionalSoleClearance = Mathf.Max(0f, additionalSoleClearance);
+            visualSoleLift = Mathf.Max(0f, visualSoleLift);
             soleHeightRatio = Mathf.Clamp(soleHeightRatio, 0.03f, 0.2f);
             minimumSoleHeight = Mathf.Max(0f, minimumSoleHeight);
             maximumSoleHeight = Mathf.Max(minimumSoleHeight, maximumSoleHeight);
