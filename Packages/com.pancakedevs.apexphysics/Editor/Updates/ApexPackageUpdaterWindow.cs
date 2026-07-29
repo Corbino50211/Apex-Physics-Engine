@@ -35,6 +35,14 @@ namespace PancakeDevs.ApexPhysics.Editor
             ApexPackageUpdater.Changed -= Repaint;
         }
 
+        private void Update()
+        {
+            if (ApexPackageUpdater.IsBusy)
+            {
+                Repaint();
+            }
+        }
+
         private void OnGUI()
         {
             EditorGUILayout.Space(10f);
