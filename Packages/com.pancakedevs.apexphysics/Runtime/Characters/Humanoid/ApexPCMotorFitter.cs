@@ -22,6 +22,7 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField] private bool fitOnStart = true;
 
         private readonly RaycastHit[] groundHits = new RaycastHit[24];
+        private bool subscribed;
 
         public ApexPhysicalHumanoid Humanoid => humanoid;
         public ApexPCPhysicalCharacter Character => character;
@@ -29,6 +30,12 @@ namespace PancakeDevs.ApexPhysics
         private void Awake()
         {
             ResolveReferences();
+        }
+
+        private void OnEnable()
+        {
+            ResolveReferences();
+            Subscribe();
         }
 
         private void Start()
@@ -39,8 +46,15 @@ namespace PancakeDevs.ApexPhysics
             }
         }
 
+        private void OnDisable()
+        {
+            Unsubscribe();
+        }
+
         public void Configure(ApexPhysicalHumanoid owner)
         {
+            Unsubscribe();
+
             humanoid = owner;
             character = owner != null
                 ? (owner.PCPhysicalCharacter != null
@@ -48,6 +62,7 @@ namespace PancakeDevs.ApexPhysics
                     : owner.GetComponent<ApexPCPhysicalCharacter>())
                 : GetComponent<ApexPCPhysicalCharacter>();
 
+            Subscribe();
             FitNow();
         }
 
@@ -127,6 +142,37 @@ namespace PancakeDevs.ApexPhysics
 
             Physics.SyncTransforms();
             return true;
+        }
+
+        private void HandleCharacterStateChanged(ApexPCCharacterState state)
+        {
+            if (state == ApexPCCharacterState.Active)
+            {
+                FitNow();
+            }
+        }
+
+        private void Subscribe()
+        {
+            if (subscribed || character == null)
+            {
+                return;
+            }
+
+            character.StateChanged += HandleCharacterStateChanged;
+            subscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            if (!subscribed || character == null)
+            {
+                subscribed = false;
+                return;
+            }
+
+            character.StateChanged -= HandleCharacterStateChanged;
+            subscribed = false;
         }
 
         private void ResolveReferences()
