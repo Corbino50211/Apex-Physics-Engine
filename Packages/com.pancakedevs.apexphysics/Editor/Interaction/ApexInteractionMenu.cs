@@ -6,12 +6,13 @@ namespace PancakeDevs.ApexPhysics.Editor
 {
     internal static class ApexInteractionMenu
     {
-        private const string MakeGrabbablePath = "Apex Physics Engine/Grabbing/Make Selected Object Grabbable";
-        private const string MakeGrabberPath = "Apex Physics Engine/Grabbing/Make Selected Object a Grabber";
-        private const string AddGrabPointPath = "Apex Physics Engine/Grabbing/Add Grab Point";
+        private const string MakeGrabbablePath =
+            "Apex Physics Engine/Player/Make Selected Object Player Grabbable";
+        private const string AddGrabPointPath =
+            "Apex Physics Engine/Player/Add Grab Point to Selected Grabbable";
 
-        [MenuItem(MakeGrabbablePath, false, 20)]
-        private static void MakeSelectedObjectGrabbable()
+        [MenuItem(MakeGrabbablePath, false, 120)]
+        private static void MakeSelectedObjectPlayerGrabbable()
         {
             GameObject selected = Selection.activeGameObject;
             if (selected == null)
@@ -19,7 +20,7 @@ namespace PancakeDevs.ApexPhysics.Editor
                 return;
             }
 
-            Undo.SetCurrentGroupName("Make Apex Grabbable");
+            Undo.SetCurrentGroupName("Make Apex Player Grabbable");
             int undoGroup = Undo.GetCurrentGroup();
 
             if (selected.GetComponentInChildren<Collider>() == null)
@@ -27,45 +28,33 @@ namespace PancakeDevs.ApexPhysics.Editor
                 Undo.AddComponent<BoxCollider>(selected);
             }
 
-            if (selected.GetComponent<Rigidbody>() == null)
+            Rigidbody body = selected.GetComponent<Rigidbody>();
+            if (body == null)
             {
-                Undo.AddComponent<Rigidbody>(selected);
+                body = Undo.AddComponent<Rigidbody>(selected);
             }
+
+            body.isKinematic = false;
+            body.useGravity = true;
 
             if (selected.GetComponent<ApexBody>() == null)
             {
                 Undo.AddComponent<ApexBody>(selected);
             }
 
-            if (selected.GetComponent<ApexGrabbable>() == null)
+            ApexGrabbable grabbable = selected.GetComponent<ApexGrabbable>();
+            if (grabbable == null)
             {
-                Undo.AddComponent<ApexGrabbable>(selected);
+                grabbable = Undo.AddComponent<ApexGrabbable>(selected);
             }
 
+            grabbable.RefreshGrabData();
             Undo.CollapseUndoOperations(undoGroup);
             EditorUtility.SetDirty(selected);
             Selection.activeGameObject = selected;
         }
 
-        [MenuItem(MakeGrabberPath, false, 21)]
-        private static void MakeSelectedObjectGrabber()
-        {
-            GameObject selected = Selection.activeGameObject;
-            if (selected == null)
-            {
-                return;
-            }
-
-            if (selected.GetComponent<ApexGrabber>() == null)
-            {
-                Undo.AddComponent<ApexGrabber>(selected);
-            }
-
-            EditorUtility.SetDirty(selected);
-            Selection.activeGameObject = selected;
-        }
-
-        [MenuItem(AddGrabPointPath, false, 22)]
+        [MenuItem(AddGrabPointPath, false, 121)]
         private static void AddGrabPoint()
         {
             GameObject selected = Selection.activeGameObject;
@@ -74,23 +63,35 @@ namespace PancakeDevs.ApexPhysics.Editor
                 return;
             }
 
+            ApexGrabbable grabbable = selected.GetComponentInParent<ApexGrabbable>();
+            if (grabbable == null)
+            {
+                EditorUtility.DisplayDialog(
+                    "Apex Player Grabbable",
+                    "Make the object Player Grabbable before adding a grab point.",
+                    "OK");
+                return;
+            }
+
             GameObject pointObject = new GameObject("Apex Grab Point");
             Undo.RegisterCreatedObjectUndo(pointObject, "Add Apex Grab Point");
-            pointObject.transform.SetParent(selected.transform, false);
+            pointObject.transform.SetParent(grabbable.transform, false);
             Undo.AddComponent<ApexGrabPoint>(pointObject);
-
-            ApexGrabbable grabbable = selected.GetComponentInParent<ApexGrabbable>();
-            grabbable?.RefreshGrabData();
-
+            grabbable.RefreshGrabData();
             Selection.activeGameObject = pointObject;
         }
 
         [MenuItem(MakeGrabbablePath, true)]
-        [MenuItem(MakeGrabberPath, true)]
-        [MenuItem(AddGrabPointPath, true)]
-        private static bool ValidateSelection()
+        private static bool ValidateMakeGrabbable()
         {
             return Selection.activeGameObject != null;
+        }
+
+        [MenuItem(AddGrabPointPath, true)]
+        private static bool ValidateAddGrabPoint()
+        {
+            return Selection.activeGameObject != null &&
+                   Selection.activeGameObject.GetComponentInParent<ApexGrabbable>() != null;
         }
     }
 }
