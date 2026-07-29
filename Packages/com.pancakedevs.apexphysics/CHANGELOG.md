@@ -2,6 +2,33 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.8] - 2026-07-28
+
+### Added
+
+- Natural procedural arm posing that lowers imported T-pose arms into a relaxed idle stance.
+- Opposing arm swing while the motor is moving.
+- A final forward/outward knee-pole correction after planted-foot IK.
+- Smoothed locomotion-speed blending so idle and walking transitions do not snap.
+
+### Changed
+
+- Procedural leg swing is reduced because planted-foot IK now owns most lower-body motion.
+- The gait component executes between the planted-foot solver and the visible physical-body pose copy.
+- Existing procedural-gait components automatically migrate to the new natural-pose defaults.
+
+### Fixed
+
+- NPCs no longer remain in a full T-pose while idle or walking without an Animator Controller.
+- Knees are directed forward with a slight outward bias instead of collapsing inward or crossing.
+- The lower body no longer relies on the imported bind-pose knee direction during locomotion.
+
+### Notes
+
+- Existing NPCs should be rebuilt once after updating.
+- Authored Animator Controllers still override the procedural fallback.
+- Unity compilation and Play Mode behavior still require confirmation in the Unity 6.2 Windows test project.
+
 ## [0.3.7] - 2026-07-28
 
 ### Fixed
@@ -40,7 +67,7 @@ All notable changes to Apex Physics Engine will be documented here.
 ### Notes
 
 - Existing NPCs should be rebuilt once after updating so the current PC physical-character modules are refreshed.
-- Unity compilation and Play Mode behavior still require confirmation in the Unity 6.2 Windows test project.
+- Unity compilation and Play Mode behavior still require validation in the Unity 6.2 Windows test project.
 
 ## [0.3.5] - 2026-07-28
 
