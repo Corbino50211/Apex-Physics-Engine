@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "displayName": "Apex Physics Engine",
-  "description": "A Unity physics framework with a custom physical OpenXR player rig, automatic Humanoid avatar scale calibration, hidden VR debug-hand visuals, one-hand and two-hand physical climbing, climbable surface markers, release momentum, guarded Humanoid scene-instance binding, procedural grounded VR legs, bind-pose-corrected foot orientation, pelvis following, knee solving, crouch support, slope-aligned feet, headset-driven body posing, stabilized physical VR grabbing, low-latency physical hands, arm reach limits, Rigidbody locomotion, room-scale recentering, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
+  "description": "A Unity physics framework with a custom physical OpenXR player rig, duplicate-free physical climbing, automatic Humanoid avatar scale calibration, hidden VR debug-hand visuals, one-hand and two-hand physical climbing, climbable surface markers, release momentum, guarded Humanoid scene-instance binding, procedural grounded VR legs, bind-pose-corrected foot orientation, pelvis following, knee solving, crouch support, slope-aligned feet, headset-driven body posing, stabilized physical VR grabbing, low-latency physical hands, arm reach limits, Rigidbody locomotion, room-scale recentering, playable PC rigs, physical NPCs, destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9",
