@@ -92,6 +92,8 @@ namespace PancakeDevs.ApexPhysics
     {
         [SerializeField] private Transform trackingTarget;
         [SerializeField] private ApexGrabber grabber;
+        [SerializeField] private Collider handCollider;
+        [SerializeField] private Collider[] playerColliders = System.Array.Empty<Collider>();
         [SerializeField, Min(0f)] private float maximumFollowDistance = 0.75f;
 
         private Rigidbody handBody;
@@ -106,6 +108,12 @@ namespace PancakeDevs.ApexPhysics
             {
                 grabber = GetComponent<ApexGrabber>();
             }
+            if (handCollider == null)
+            {
+                handCollider = GetComponent<Collider>();
+            }
+
+            IgnorePlayerCollisions();
         }
 
         private void FixedUpdate()
@@ -128,11 +136,34 @@ namespace PancakeDevs.ApexPhysics
             handBody.MoveRotation(trackingTarget.rotation);
         }
 
+        private void IgnorePlayerCollisions()
+        {
+            if (handCollider == null || playerColliders == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < playerColliders.Length; i++)
+            {
+                Collider playerCollider = playerColliders[i];
+                if (playerCollider != null && playerCollider != handCollider)
+                {
+                    Physics.IgnoreCollision(handCollider, playerCollider, true);
+                }
+            }
+        }
+
 #if UNITY_EDITOR
-        public void EditorConfigure(Transform target, ApexGrabber handGrabber)
+        public void EditorConfigure(
+            Transform target,
+            ApexGrabber handGrabber,
+            Collider physicalCollider,
+            Collider[] bodyColliders)
         {
             trackingTarget = target;
             grabber = handGrabber;
+            handCollider = physicalCollider;
+            playerColliders = bodyColliders ?? System.Array.Empty<Collider>();
         }
 #endif
     }
