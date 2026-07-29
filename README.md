@@ -1,31 +1,32 @@
 # Apex Physics Engine
 
-**A PC-first Unity physics framework for physical characters, props, and gameplay systems.**
+**A PC-first Unity physics framework for physical characters, props, destruction, and gameplay systems.**
 By [PancakeDevs](https://github.com/Corbino50211).
 
 > Make Everything Physical.
 
 ![Unity 6000.0+](https://img.shields.io/badge/Unity-6000.0%2B-black)
-![Version 0.3.12](https://img.shields.io/badge/version-0.3.12-blue)
+![Version 0.4.0](https://img.shields.io/badge/version-0.4.0-blue)
 ![Status: Active Development](https://img.shields.io/badge/status-active%20development-orange)
 
-Apex turns animated humanoids into grounded PC physical characters with motor-driven locomotion, procedural foot planting, momentum-preserving ragdolls, and automatic get-up recovery. Everything ships as modular components you drop onto existing prefabs — no scene manager, no framework lock-in, no render pipeline or networking dependency.
+Apex provides grounded PC physical characters with motor-driven locomotion, procedural foot planting, momentum-preserving ragdolls, automatic get-up recovery, force-driven interaction, editor-generated destructible meshes, and reusable physics gameplay components. Everything is modular — no required scene manager, networking library, or render pipeline.
 
 ---
 
 ## Status
 
-Apex is in active development at `0.3.x`. The API is usable but not frozen; minor versions may introduce breaking changes until `1.0`.
+Apex is in active development at `0.4.x`. The API is usable but not frozen; minor versions may introduce breaking changes until `1.0`.
 
 | Module | What it does |
 | --- | --- |
 | **Core** | `ApexBody` Rigidbody wrapper, reusable `ApexPhysicsProfile` assets, universal impact events |
 | **Characters** | PC physical humanoids, embedded character motor, natural procedural gait, planted feet, single-owner foot orientation |
 | **Ragdoll** | Active ragdolls, momentum transfer on knockdown, automatic get-up recovery |
+| **Destruction** | Editor-generated mesh fracture, interior polygons, partial impact breakage, momentum-preserving debris |
 | **Navigation** | NPC brain with Idle/Wander/Chase modes, motor-driven NavMesh movement, auto-baking |
 | **Interaction** | Force-driven grabbers, grabbables, authored grab points and poses |
 | **Warehouse** | Crates, pallets, spawners, barcode-driven spawnable assets with editor previews |
-| **Editor** | Humanoid converter, lighting bake workflows, setup menus, in-editor package updates |
+| **Editor** | Humanoid conversion, destruction authoring, lighting workflows, setup menus, in-editor package updates |
 
 VR character support is planned once the desktop character foundation is stable.
 
@@ -78,7 +79,20 @@ The object now has profile-driven Rigidbody settings, safe force helpers, veloci
 
 The character moves through an embedded Rigidbody motor, plants its feet against the ground, ragdolls on hard impacts, and stands back up automatically.
 
-> Apex 0.3.12 does not require Humanoid toe-bone mappings for final foot orientation. The system preserves each avatar's original foot rotation, aligns it to the floor, and applies one controlled toe-up pitch.
+> Apex 0.3.12 and newer do not require Humanoid toe-bone mappings for final foot orientation. The system preserves each avatar's original foot rotation, aligns it to the floor, and applies one controlled toe-up pitch.
+
+### Make a mesh destructible
+
+1. Place a closed mesh prefab into a scene.
+2. Select the GameObject containing its `MeshFilter` and `MeshRenderer`.
+3. **Apex Physics Engine → Destruction → Fracture Selected Mesh...**
+4. Choose a target chunk count and optional interior material.
+5. Click **Generate / Rebuild Fracture**.
+6. Press Play and strike the object with enough impulse.
+
+Apex slices the source mesh in the editor, generates new polygons across the exposed interior surfaces, creates centered debris chunks with convex colliders, and transfers the intact object's motion into released pieces.
+
+> The 0.4.0 foundation expects a closed, manifold mesh with real volume. Open planes, paper-thin geometry, and heavily self-intersecting meshes may not fracture correctly.
 
 ---
 
@@ -104,7 +118,7 @@ public sealed class PushApexBody : MonoBehaviour
 
 ### Reacting to impacts
 
-`ApexImpactInfo` carries contact point, normal, relative velocity, and impulse — enough to drive damage, audio, particles, or haptics without coupling to the body itself.
+`ApexImpactInfo` carries contact point, normal, relative velocity, and impulse — enough to drive damage, audio, particles, haptics, or destruction without coupling to the body itself.
 
 ```csharp
 using PancakeDevs.ApexPhysics;
@@ -155,6 +169,23 @@ public sealed class ChasePlayer : MonoBehaviour
 }
 ```
 
+### Breaking a destructible from code
+
+```csharp
+using PancakeDevs.ApexPhysics;
+using UnityEngine;
+
+public sealed class BreakTarget : MonoBehaviour
+{
+    [SerializeField] private ApexDestructible target;
+
+    public void Explode(Vector3 worldPoint, float impulse)
+    {
+        target.BreakAt(worldPoint, Vector3.up, impulse);
+    }
+}
+```
+
 ---
 
 ## Samples
@@ -177,6 +208,7 @@ Full guides live in [`Packages/com.pancakedevs.apexphysics/Documentation~/`](Pac
 | [supported-humanoids.md](Packages/com.pancakedevs.apexphysics/Documentation~/supported-humanoids.md) | Rig requirements |
 | [navigation.md](Packages/com.pancakedevs.apexphysics/Documentation~/navigation.md) | NavMesh, brains, motors |
 | [grabbing.md](Packages/com.pancakedevs.apexphysics/Documentation~/grabbing.md) | Grabbers and grab points |
+| [destruction.md](Packages/com.pancakedevs.apexphysics/Documentation~/destruction.md) | Mesh fracture and runtime destruction |
 | [warehouse.md](Packages/com.pancakedevs.apexphysics/Documentation~/warehouse.md) | Crates, pallets, spawners |
 | [lighting.md](Packages/com.pancakedevs.apexphysics/Documentation~/lighting.md) | Bake presets and workflows |
 | [updates.md](Packages/com.pancakedevs.apexphysics/Documentation~/updates.md) | In-editor package updater |
@@ -187,14 +219,14 @@ Version history is tracked in [CHANGELOG.md](Packages/com.pancakedevs.apexphysic
 
 ## Architecture
 
-**Namespace:** `PancakeDevs.ApexPhysics`
+**Namespace:** `PancakeDevs.ApexPhysics`  
 **Assemblies:** `PancakeDevs.ApexPhysics.Runtime`, `PancakeDevs.ApexPhysics.Editor`
 
 Design rules the codebase holds itself to:
 
 - Runtime code must not depend on a render pipeline.
 - Core code must not depend on a networking library.
-- Editor-only code stays outside runtime assemblies.
+- Editor-only geometry generation stays outside runtime assemblies.
 - Features are modular components, never one large manager.
 - Existing Unity project settings are never changed silently.
 
