@@ -13,7 +13,7 @@ namespace PancakeDevs.ApexPhysics
     [AddComponentMenu("")]
     public sealed class ApexPCFootPlanting : MonoBehaviour
     {
-        private const int CurrentSettingsVersion = 1;
+        private const int CurrentSettingsVersion = 2;
 
         private sealed class LegState
         {
@@ -51,6 +51,10 @@ namespace PancakeDevs.ApexPhysics
         [SerializeField, Min(0f)] private float maximumHipsCorrection = 0.45f;
         [SerializeField, Min(0f)] private float hipsHeightFollowSpeed = 8f;
         [SerializeField] private LayerMask groundLayers = ~0;
+
+        [Header("Foot Rotation")]
+        [SerializeField, Range(0f, 25f)] private float plantedToeUpDegrees = 7f;
+        [SerializeField, Range(0f, 30f)] private float steppingToeUpExtraDegrees = 8f;
 
         [Header("Stepping")]
         [SerializeField, Min(0.05f)] private float stepDistance = 0.18f;
@@ -630,7 +634,17 @@ namespace PancakeDevs.ApexPhysics
                 ? groundNormal.normalized
                 : Vector3.up;
             Quaternion slopeRotation = Quaternion.FromToRotation(Vector3.up, normal);
-            leg.foot.rotation = slopeRotation * motorBody.rotation * leg.footRotationOffset;
+            Quaternion baseFootRotation =
+                slopeRotation * motorBody.rotation * leg.footRotationOffset;
+
+            float stepProgress = leg.stepping ? GetStepProgress(leg) : 0f;
+            float stepToeLift = leg.stepping
+                ? Mathf.Sin(stepProgress * Mathf.PI) * steppingToeUpExtraDegrees
+                : 0f;
+            float toeUpDegrees = plantedToeUpDegrees + stepToeLift;
+            Vector3 ankleRightAxis = baseFootRotation * Vector3.right;
+            Quaternion toeUpRotation = Quaternion.AngleAxis(-toeUpDegrees, ankleRightAxis);
+            leg.foot.rotation = toeUpRotation * baseFootRotation;
         }
 
         private bool TryFindGround(
@@ -707,15 +721,20 @@ namespace PancakeDevs.ApexPhysics
 
         private void ApplyVersionedDefaults()
         {
-            if (settingsVersion >= CurrentSettingsVersion)
+            if (settingsVersion < 1)
             {
-                return;
+                additionalSoleClearance = Mathf.Max(additionalSoleClearance, 0.012f);
+                visualSoleLift = Mathf.Max(visualSoleLift, 0.012f);
+                maximumSoleHeight = Mathf.Max(maximumSoleHeight, 0.12f);
+                settingsVersion = 1;
             }
 
-            additionalSoleClearance = Mathf.Max(additionalSoleClearance, 0.012f);
-            visualSoleLift = Mathf.Max(visualSoleLift, 0.012f);
-            maximumSoleHeight = Mathf.Max(maximumSoleHeight, 0.12f);
-            settingsVersion = CurrentSettingsVersion;
+            if (settingsVersion < CurrentSettingsVersion)
+            {
+                plantedToeUpDegrees = Mathf.Max(plantedToeUpDegrees, 7f);
+                steppingToeUpExtraDegrees = Mathf.Max(steppingToeUpExtraDegrees, 8f);
+                settingsVersion = CurrentSettingsVersion;
+            }
         }
 
         private static float PlanarDistance(Vector3 first, Vector3 second)
@@ -736,6 +755,8 @@ namespace PancakeDevs.ApexPhysics
             maximumSoleHeight = Mathf.Max(minimumSoleHeight, maximumSoleHeight);
             maximumHipsCorrection = Mathf.Max(0f, maximumHipsCorrection);
             hipsHeightFollowSpeed = Mathf.Max(0f, hipsHeightFollowSpeed);
+            plantedToeUpDegrees = Mathf.Clamp(plantedToeUpDegrees, 0f, 25f);
+            steppingToeUpExtraDegrees = Mathf.Clamp(steppingToeUpExtraDegrees, 0f, 30f);
             stepDistance = Mathf.Max(0.05f, stepDistance);
             stepDuration = Mathf.Max(0.05f, stepDuration);
             stepHeight = Mathf.Max(0f, stepHeight);
