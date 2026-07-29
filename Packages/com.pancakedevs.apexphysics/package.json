@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.3.9",
+  "version": "0.3.10",
   "displayName": "Apex Physics Engine",
-  "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, natural procedural idle and walking poses, planted footsteps with toe-up foot roll, motor-driven NavMesh movement, momentum-preserving ragdolls, get-up recovery, grabbable objects, barcode-driven crates with Void scene previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
+  "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, natural procedural idle and walking poses, toe-bone-aware planted footsteps, motor-driven NavMesh movement, momentum-preserving ragdolls, get-up recovery, grabbable objects, barcode-driven crates with Void scene previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -21,6 +21,7 @@
     "procedural-gait",
     "foot-planting",
     "toe-roll",
+    "toe-bone",
     "grounded-walking",
     "ragdoll",
     "momentum",
