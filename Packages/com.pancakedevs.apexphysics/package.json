@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "displayName": "Apex Physics Engine",
-  "description": "A PC-first Unity physics framework for stable physical NPCs, impact ragdolls, get-up recovery, grabbable objects, barcode-driven crates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
+  "description": "A PC-first Unity physics framework for stable physical NPCs, impact ragdolls, get-up recovery, grabbable objects, barcode-driven crates with Void scene previews, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -32,6 +32,8 @@
     "pallet",
     "barcode",
     "spawnable",
+    "preview",
+    "void-preview",
     "lighting",
     "lightmapping"
   ],
