@@ -40,14 +40,22 @@ namespace PancakeDevs.ApexPhysics
         [Header("Grounding")]
         [SerializeField, Min(0.05f)] private float groundProbeHeight = 0.8f;
         [SerializeField, Min(0.05f)] private float groundProbeDistance = 1.6f;
-        [SerializeField, Min(0f)] private float additionalSoleClearance = 0.015f;
+        [SerializeField, Min(0f)] private float additionalSoleClearance = 0.01f;
+        [SerializeField, Range(0.03f, 0.2f)] private float soleHeightRatio = 0.08f;
+        [SerializeField, Min(0f)] private float minimumSoleHeight = 0.025f;
+        [SerializeField, Min(0f)] private float maximumSoleHeight = 0.09f;
+        [SerializeField, Min(0f)] private float maximumHipsCorrection = 0.45f;
+        [SerializeField, Min(0f)] private float hipsHeightFollowSpeed = 8f;
         [SerializeField] private LayerMask groundLayers = ~0;
 
         [Header("Stepping")]
-        [SerializeField, Min(0.05f)] private float stepDistance = 0.28f;
-        [SerializeField, Min(0.05f)] private float stepDuration = 0.24f;
-        [SerializeField, Min(0f)] private float stepHeight = 0.13f;
-        [SerializeField, Min(0f)] private float forwardStepLead = 0.18f;
+        [SerializeField, Min(0.05f)] private float stepDistance = 0.18f;
+        [SerializeField, Min(0.05f)] private float stepDuration = 0.17f;
+        [SerializeField, Min(0f)] private float stepHeight = 0.12f;
+        [SerializeField, Min(0f)] private float forwardStepLead = 0.22f;
+        [SerializeField, Min(0f)] private float speedLeadMultiplier = 0.06f;
+        [SerializeField, Min(0f)] private float maximumForwardLead = 0.45f;
+        [SerializeField, Range(0f, 1f)] private float nextStepOverlap = 0.58f;
         [SerializeField, Min(0f)] private float minimumMovingSpeed = 0.08f;
         [SerializeField, Min(0f)] private float teleportResetDistance = 1.2f;
 
@@ -56,6 +64,11 @@ namespace PancakeDevs.ApexPhysics
         private readonly RaycastHit[] groundHits = new RaycastHit[24];
 
         private Rigidbody motorBody;
+        private Transform hipsAnchor;
+        private Transform targetHips;
+        private Vector3 baseHipsAnchorLocalPosition;
+        private float standingHipsHeight;
+        private bool hipsHeightCalibrated;
         private bool initialized;
         private bool subscribed;
         private bool preferLeftStep = true;
@@ -102,6 +115,8 @@ namespace PancakeDevs.ApexPhysics
             }
             lastMotorPosition = motorPosition;
 
+            GroundHipsToFloor(false);
+
             Vector3 planarVelocity = Vector3.ProjectOnPlane(motorBody.velocity, Vector3.up);
             float speed = planarVelocity.magnitude;
             Vector3 movementDirection = speed > minimumMovingSpeed
@@ -112,37 +127,27 @@ namespace PancakeDevs.ApexPhysics
                 movementDirection = Vector3.forward;
             }
 
-            ResolveDesiredGroundPoint(leftLeg, movementDirection, speed, out Vector3 leftDesired, out Vector3 leftNormal);
-            ResolveDesiredGroundPoint(rightLeg, movementDirection, speed, out Vector3 rightDesired, out Vector3 rightNormal);
+            ResolveDesiredGroundPoint(
+                leftLeg,
+                movementDirection,
+                speed,
+                out Vector3 leftDesired,
+                out Vector3 leftNormal);
+            ResolveDesiredGroundPoint(
+                rightLeg,
+                movementDirection,
+                speed,
+                out Vector3 rightDesired,
+                out Vector3 rightNormal);
 
             UpdateStep(leftLeg);
             UpdateStep(rightLeg);
-
-            if (!leftLeg.stepping && !rightLeg.stepping)
-            {
-                float leftError = PlanarDistance(leftLeg.plantedPosition, leftDesired);
-                float rightError = PlanarDistance(rightLeg.plantedPosition, rightDesired);
-                float threshold = speed > minimumMovingSpeed ? stepDistance : stepDistance * 1.35f;
-
-                if (leftError > threshold || rightError > threshold)
-                {
-                    bool stepLeft = leftError > rightError + 0.025f
-                        ? true
-                        : rightError > leftError + 0.025f
-                            ? false
-                            : preferLeftStep;
-
-                    if (stepLeft)
-                    {
-                        BeginStep(leftLeg, leftDesired, leftNormal);
-                    }
-                    else
-                    {
-                        BeginStep(rightLeg, rightDesired, rightNormal);
-                    }
-                    preferLeftStep = !stepLeft;
-                }
-            }
+            TryBeginNeededStep(
+                leftDesired,
+                leftNormal,
+                rightDesired,
+                rightNormal,
+                speed);
 
             Vector3 leftTarget = GetCurrentTarget(leftLeg, out Vector3 leftTargetNormal);
             Vector3 rightTarget = GetCurrentTarget(rightLeg, out Vector3 rightTargetNormal);
@@ -158,7 +163,20 @@ namespace PancakeDevs.ApexPhysics
             targetAnimator = owner != null && owner.Humanoid != null
                 ? owner.Humanoid.TargetAnimator
                 : null;
+            targetHips = owner != null && owner.Humanoid != null
+                ? owner.Humanoid.TargetHips
+                : null;
             motorBody = owner != null ? owner.MotorBody : null;
+            hipsAnchor = motorBody != null
+                ? motorBody.transform.Find("Hips Anchor")
+                : null;
+
+            if (hipsAnchor != null)
+            {
+                baseHipsAnchorLocalPosition = hipsAnchor.localPosition;
+            }
+
+            hipsHeightCalibrated = false;
             CacheLegs();
             initialized = false;
             Subscribe();
@@ -187,9 +205,24 @@ namespace PancakeDevs.ApexPhysics
                 targetAnimator = character.Humanoid.TargetAnimator;
             }
 
+            if (targetHips == null)
+            {
+                targetHips = character.Humanoid.TargetHips;
+            }
+
             if (motorBody == null)
             {
                 motorBody = character.MotorBody;
+            }
+
+            if (hipsAnchor == null && motorBody != null)
+            {
+                hipsAnchor = motorBody.transform.Find("Hips Anchor");
+                if (hipsAnchor != null)
+                {
+                    baseHipsAnchorLocalPosition = hipsAnchor.localPosition;
+                    hipsHeightCalibrated = false;
+                }
             }
 
             if (!leftLeg.valid || !rightLeg.valid)
@@ -198,7 +231,7 @@ namespace PancakeDevs.ApexPhysics
             }
 
             return targetAnimator != null && targetAnimator.isHuman && motorBody != null &&
-                   leftLeg.valid && rightLeg.valid;
+                   hipsAnchor != null && targetHips != null && leftLeg.valid && rightLeg.valid;
         }
 
         private void CacheLegs()
@@ -247,6 +280,8 @@ namespace PancakeDevs.ApexPhysics
                 return false;
             }
 
+            CalibrateStandingHipsHeight();
+            GroundHipsToFloor(true);
             InitializeLeg(leftLeg);
             InitializeLeg(rightLeg);
             initialized = leftLeg.valid && rightLeg.valid;
@@ -255,25 +290,76 @@ namespace PancakeDevs.ApexPhysics
             return initialized;
         }
 
+        private void CalibrateStandingHipsHeight()
+        {
+            if (hipsHeightCalibrated || targetHips == null || !leftLeg.valid || !rightLeg.valid)
+            {
+                return;
+            }
+
+            float leftHeight = Vector3.Dot(targetHips.position - leftLeg.foot.position, Vector3.up) +
+                               EstimateSoleOffset(leftLeg);
+            float rightHeight = Vector3.Dot(targetHips.position - rightLeg.foot.position, Vector3.up) +
+                                EstimateSoleOffset(rightLeg);
+
+            standingHipsHeight = Mathf.Max(0.2f, (leftHeight + rightHeight) * 0.5f);
+            baseHipsAnchorLocalPosition = hipsAnchor.localPosition;
+            hipsHeightCalibrated = true;
+        }
+
+        private void GroundHipsToFloor(bool snap)
+        {
+            if (!hipsHeightCalibrated || hipsAnchor == null || motorBody == null ||
+                !TryFindGround(motorBody.position, out Vector3 groundPoint, out _))
+            {
+                return;
+            }
+
+            Vector3 desiredWorldPosition = hipsAnchor.position;
+            desiredWorldPosition.y = groundPoint.y + standingHipsHeight;
+            Vector3 desiredLocalPosition =
+                motorBody.transform.InverseTransformPoint(desiredWorldPosition);
+
+            desiredLocalPosition.x = baseHipsAnchorLocalPosition.x;
+            desiredLocalPosition.z = baseHipsAnchorLocalPosition.z;
+            desiredLocalPosition.y = Mathf.Clamp(
+                desiredLocalPosition.y,
+                baseHipsAnchorLocalPosition.y - maximumHipsCorrection,
+                baseHipsAnchorLocalPosition.y + maximumHipsCorrection * 0.25f);
+
+            Vector3 localPosition = hipsAnchor.localPosition;
+            localPosition.x = baseHipsAnchorLocalPosition.x;
+            localPosition.z = baseHipsAnchorLocalPosition.z;
+            localPosition.y = snap
+                ? desiredLocalPosition.y
+                : Mathf.MoveTowards(
+                    localPosition.y,
+                    desiredLocalPosition.y,
+                    hipsHeightFollowSpeed * Time.deltaTime);
+            hipsAnchor.localPosition = localPosition;
+
+            ApexHumanoidTargetRootDriver rootDriver = character.Humanoid.TargetRootDriver;
+            if (rootDriver != null)
+            {
+                rootDriver.SnapNow();
+            }
+        }
+
         private void InitializeLeg(LegState leg)
         {
             Vector3 localFoot = motorBody.transform.InverseTransformPoint(leg.foot.position);
             leg.lateralOffset = localFoot.x;
             leg.forwardOffset = localFoot.z;
             leg.footRotationOffset = Quaternion.Inverse(motorBody.rotation) * leg.foot.rotation;
+            leg.soleOffset = EstimateSoleOffset(leg);
 
             if (TryFindGround(leg.foot.position, out Vector3 point, out Vector3 normal))
             {
-                leg.soleOffset = Mathf.Clamp(
-                    Vector3.Dot(leg.foot.position - point, normal),
-                    0.025f,
-                    Mathf.Max(0.04f, leg.lowerLength * 0.45f));
                 leg.plantedPosition = point + normal * (leg.soleOffset + additionalSoleClearance);
                 leg.plantedNormal = normal;
             }
             else
             {
-                leg.soleOffset = 0.06f;
                 leg.plantedPosition = leg.foot.position;
                 leg.plantedNormal = Vector3.up;
             }
@@ -284,6 +370,12 @@ namespace PancakeDevs.ApexPhysics
             leg.stepping = false;
         }
 
+        private float EstimateSoleOffset(LegState leg)
+        {
+            float estimated = leg.lowerLength * soleHeightRatio;
+            return Mathf.Clamp(estimated, minimumSoleHeight, maximumSoleHeight);
+        }
+
         private void ResolveDesiredGroundPoint(
             LegState leg,
             Vector3 movementDirection,
@@ -292,7 +384,11 @@ namespace PancakeDevs.ApexPhysics
             out Vector3 desiredNormal)
         {
             Transform motor = motorBody.transform;
-            float lead = speed > minimumMovingSpeed ? forwardStepLead : 0f;
+            float lead = speed > minimumMovingSpeed
+                ? Mathf.Min(
+                    maximumForwardLead,
+                    forwardStepLead + speed * speedLeadMultiplier)
+                : 0f;
             Vector3 stancePoint = motor.position +
                                   motor.right * leg.lateralOffset +
                                   motor.forward * leg.forwardOffset +
@@ -308,6 +404,62 @@ namespace PancakeDevs.ApexPhysics
             desiredPosition = stancePoint;
             desiredPosition.y = leg.plantedPosition.y;
             desiredNormal = leg.plantedNormal;
+        }
+
+        private void TryBeginNeededStep(
+            Vector3 leftDesired,
+            Vector3 leftNormal,
+            Vector3 rightDesired,
+            Vector3 rightNormal,
+            float speed)
+        {
+            float leftError = PlanarDistance(leftLeg.plantedPosition, leftDesired);
+            float rightError = PlanarDistance(rightLeg.plantedPosition, rightDesired);
+            float movingThreshold = Mathf.Max(0.08f, stepDistance - speed * 0.015f);
+            float threshold = speed > minimumMovingSpeed
+                ? movingThreshold
+                : stepDistance * 1.35f;
+
+            bool leftCanStep = !leftLeg.stepping &&
+                               (!rightLeg.stepping || GetStepProgress(rightLeg) >= nextStepOverlap);
+            bool rightCanStep = !rightLeg.stepping &&
+                                (!leftLeg.stepping || GetStepProgress(leftLeg) >= nextStepOverlap);
+            bool leftNeedsStep = leftCanStep && leftError > threshold;
+            bool rightNeedsStep = rightCanStep && rightError > threshold;
+
+            if (!leftNeedsStep && !rightNeedsStep)
+            {
+                return;
+            }
+
+            bool stepLeft;
+            if (leftNeedsStep && !rightNeedsStep)
+            {
+                stepLeft = true;
+            }
+            else if (rightNeedsStep && !leftNeedsStep)
+            {
+                stepLeft = false;
+            }
+            else
+            {
+                stepLeft = leftError > rightError + 0.025f
+                    ? true
+                    : rightError > leftError + 0.025f
+                        ? false
+                        : preferLeftStep;
+            }
+
+            if (stepLeft)
+            {
+                BeginStep(leftLeg, leftDesired, leftNormal);
+            }
+            else
+            {
+                BeginStep(rightLeg, rightDesired, rightNormal);
+            }
+
+            preferLeftStep = !stepLeft;
         }
 
         private void BeginStep(
@@ -329,7 +481,7 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            float progress = Mathf.Clamp01((Time.time - leg.stepStartedAt) / stepDuration);
+            float progress = GetStepProgress(leg);
             if (progress < 1f)
             {
                 return;
@@ -340,6 +492,13 @@ namespace PancakeDevs.ApexPhysics
             leg.stepping = false;
         }
 
+        private float GetStepProgress(LegState leg)
+        {
+            return leg.stepping
+                ? Mathf.Clamp01((Time.time - leg.stepStartedAt) / stepDuration)
+                : 1f;
+        }
+
         private Vector3 GetCurrentTarget(LegState leg, out Vector3 normal)
         {
             if (!leg.stepping)
@@ -348,7 +507,7 @@ namespace PancakeDevs.ApexPhysics
                 return leg.plantedPosition;
             }
 
-            float progress = Mathf.Clamp01((Time.time - leg.stepStartedAt) / stepDuration);
+            float progress = GetStepProgress(leg);
             float smooth = progress * progress * (3f - 2f * progress);
             Vector3 target = Vector3.Lerp(leg.stepStart, leg.stepEnd, smooth);
             target += Vector3.up * (Mathf.Sin(progress * Mathf.PI) * stepHeight);
@@ -458,6 +617,11 @@ namespace PancakeDevs.ApexPhysics
         private void HandleCharacterStateChanged(ApexPCCharacterState state)
         {
             initialized = false;
+            if (state == ApexPCCharacterState.Active && hipsAnchor != null)
+            {
+                baseHipsAnchorLocalPosition = hipsAnchor.localPosition;
+                hipsHeightCalibrated = false;
+            }
         }
 
         private void Subscribe()
@@ -494,10 +658,18 @@ namespace PancakeDevs.ApexPhysics
             groundProbeHeight = Mathf.Max(0.05f, groundProbeHeight);
             groundProbeDistance = Mathf.Max(0.05f, groundProbeDistance);
             additionalSoleClearance = Mathf.Max(0f, additionalSoleClearance);
+            soleHeightRatio = Mathf.Clamp(soleHeightRatio, 0.03f, 0.2f);
+            minimumSoleHeight = Mathf.Max(0f, minimumSoleHeight);
+            maximumSoleHeight = Mathf.Max(minimumSoleHeight, maximumSoleHeight);
+            maximumHipsCorrection = Mathf.Max(0f, maximumHipsCorrection);
+            hipsHeightFollowSpeed = Mathf.Max(0f, hipsHeightFollowSpeed);
             stepDistance = Mathf.Max(0.05f, stepDistance);
             stepDuration = Mathf.Max(0.05f, stepDuration);
             stepHeight = Mathf.Max(0f, stepHeight);
             forwardStepLead = Mathf.Max(0f, forwardStepLead);
+            speedLeadMultiplier = Mathf.Max(0f, speedLeadMultiplier);
+            maximumForwardLead = Mathf.Max(forwardStepLead, maximumForwardLead);
+            nextStepOverlap = Mathf.Clamp01(nextStepOverlap);
             minimumMovingSpeed = Mathf.Max(0f, minimumMovingSpeed);
             teleportResetDistance = Mathf.Max(0f, teleportResetDistance);
         }
