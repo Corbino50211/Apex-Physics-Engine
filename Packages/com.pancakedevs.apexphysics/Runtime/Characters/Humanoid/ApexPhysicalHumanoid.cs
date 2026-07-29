@@ -34,6 +34,7 @@ namespace PancakeDevs.ApexPhysics
 
         [Header("PC Character System")]
         [SerializeField] private ApexPCPhysicalCharacter pcPhysicalCharacter;
+        [SerializeField] private ApexPCMotorFitter pcMotorFitter;
         [SerializeField] private ApexPCProceduralGait pcProceduralGait;
         [SerializeField] private ApexPCFootPlanting pcFootPlanting;
         [SerializeField] private ApexPCNavigationDriver pcNavigationDriver;
@@ -63,6 +64,7 @@ namespace PancakeDevs.ApexPhysics
         public Transform TargetHips => targetHips;
         public ApexRagdollBone PhysicalHips => physicalHips;
         public ApexPCPhysicalCharacter PCPhysicalCharacter => pcPhysicalCharacter;
+        public ApexPCMotorFitter PCMotorFitter => pcMotorFitter;
         public ApexPCProceduralGait PCProceduralGait => pcProceduralGait;
         public ApexPCFootPlanting PCFootPlanting => pcFootPlanting;
         public ApexPCNavigationDriver PCNavigationDriver => pcNavigationDriver;
@@ -150,6 +152,18 @@ namespace PancakeDevs.ApexPhysics
             }
 
             pcPhysicalCharacter.Configure(this);
+
+            if (pcMotorFitter == null)
+            {
+                pcMotorFitter = GetComponent<ApexPCMotorFitter>();
+            }
+
+            if (pcMotorFitter == null)
+            {
+                pcMotorFitter = gameObject.AddComponent<ApexPCMotorFitter>();
+            }
+
+            pcMotorFitter.Configure(this);
 
             if (pcProceduralGait == null)
             {
