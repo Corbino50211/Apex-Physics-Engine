@@ -2,6 +2,25 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.10] - 2026-07-29
+
+### Fixed
+
+- Replaced the assumed foot local-X rotation with a Humanoid toe-bone direction solve.
+- Procedural feet now aim the real `Foot → Toes` vector upward, so avatars with rotated or unusual foot-bone axes receive visible toe lift.
+- The final toe correction runs after planted-foot IK and knee stabilization but before the visible physical body copies the pose.
+
+### Changed
+
+- Default planted toe pitch is `8` degrees with up to `4` additional degrees while moving.
+- Foot colliders, sole clearance, planted positions, motor placement, and leg reach remain unchanged.
+
+### Notes
+
+- Existing NPCs should be rebuilt once after updating.
+- The imported Humanoid avatar must map `Left Toes` and `Right Toes` for automatic axis detection.
+- Unity compilation and Play Mode behavior still require confirmation in the Unity 6.2 Windows test project.
+
 ## [0.3.9] - 2026-07-28
 
 ### Added
