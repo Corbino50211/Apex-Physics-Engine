@@ -2,6 +2,29 @@
 
 All notable changes to Apex Physics Engine will be documented here.
 
+## [0.3.4] - 2026-07-28
+
+### Added
+
+- **Apex Physics Engine > Updates > Check for Updates...** top-level editor command.
+- `ApexPackageUpdaterWindow` showing installed version, latest version, update status, and release branch.
+- Automatic update checks when Unity opens, enabled by default with a 12-hour check interval.
+- Optional automatic installation after an update is detected.
+- Exact-commit Unity Package Manager installation so an update cannot reuse an older cached revision.
+- **Reinstall Latest Revision** and **Copy Package URL** recovery actions.
+
+### Changed
+
+- User-started update checks offer to install a newer package immediately.
+- Update installation is handled entirely through Unity Package Manager and can trigger the normal script reload.
+
+### Notes
+
+- Version 0.3.4 must be installed once through the normal Git package URL. Later package versions can be installed from the Apex updater window.
+- Automatic installation is disabled by default. Automatic checking is enabled by default.
+- The updater reads the public PancakeDevs GitHub release branch and does not require a GitHub token.
+- Unity compilation and a complete self-update cycle still require confirmation in the Unity 6.2 Windows test project.
+
 ## [0.3.3] - 2026-07-28
 
 ### Added
