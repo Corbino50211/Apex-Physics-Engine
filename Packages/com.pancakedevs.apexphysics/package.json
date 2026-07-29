@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "displayName": "Apex Physics Engine",
-  "description": "A Unity physics framework with playable PC and VR rigs, OpenXR support, SteamVR rigs built from Valve's Interaction System Player prefab, guarded SteamVR self-collisions, force-driven grabbing, physical NPCs, editor-generated destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
+  "description": "A Unity physics framework with playable PC and VR rigs, OpenXR support, SteamVR rigs built from Valve's Interaction System Player prefab, stable Valve-authoritative SteamVR tracking, force-driven grabbing, physical NPCs, editor-generated destruction, synchronized water and buoyancy, warehouse systems, navigation, lighting workflows, and package updates.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9",
@@ -24,7 +24,7 @@
     "openvr",
     "valve-player-prefab",
     "interaction-system",
-    "self-collision-guard",
+    "steamvr-stability",
     "xr",
     "tracked-hands",
     "smooth-locomotion",
