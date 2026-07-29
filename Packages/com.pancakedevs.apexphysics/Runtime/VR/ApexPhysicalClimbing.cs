@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.XR;
 
 namespace PancakeDevs.ApexPhysics
 {
@@ -33,8 +34,7 @@ namespace PancakeDevs.ApexPhysics
 
     /// <summary>
     /// Anchors tracked hands to climbable surfaces and moves the physical player body
-    /// opposite controller motion. Supports one-hand hanging, two-hand climbing, moving
-    /// climbables, reach enforcement, gravity compensation, and release momentum.
+    /// opposite controller motion. Existing OpenXR rigs are supported without rebuilding.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ApexPhysicalOpenXRBody), typeof(Rigidbody))]
@@ -68,6 +68,9 @@ namespace PancakeDevs.ApexPhysics
         private readonly HoldState leftHold = new HoldState();
         private readonly HoldState rightHold = new HoldState();
         private Rigidbody body;
+        private bool leftGripHeld;
+        private bool rightGripHeld;
+        private bool bodyMotorSuppressed;
 
         public bool IsClimbing => leftHold.Active || rightHold.Active;
         public bool IsLeftClimbing => leftHold.Active;
@@ -95,19 +98,38 @@ namespace PancakeDevs.ApexPhysics
             ResolveHands();
         }
 
+        private void OnEnable()
+        {
+            ResolveHands();
+        }
+
         private void OnDisable()
         {
             ReleaseAll(false);
+            RestoreBodyMotor();
+        }
+
+        private void Update()
+        {
+            InputDevice leftDevice = InputDevices.GetDeviceAtXRNode(XRNode.LeftHand);
+            InputDevice rightDevice = InputDevices.GetDeviceAtXRNode(XRNode.RightHand);
+
+            leftDevice.TryGetFeatureValue(CommonUsages.gripButton, out bool leftGrip);
+            rightDevice.TryGetFeatureValue(CommonUsages.gripButton, out bool rightGrip);
+
+            UpdateGrip(leftHand, leftGrip, ref leftGripHeld);
+            UpdateGrip(rightHand, rightGrip, ref rightGripHeld);
         }
 
         private void FixedUpdate()
         {
             if (!IsClimbing || body == null)
             {
-                SetBodyClimbing(false);
+                RestoreBodyMotor();
                 return;
             }
 
+            SuppressBodyMotor();
             UpdateHoldVelocity(leftHold);
             UpdateHoldVelocity(rightHold);
 
@@ -118,7 +140,7 @@ namespace PancakeDevs.ApexPhysics
 
             if (holdCount == 0)
             {
-                SetBodyClimbing(false);
+                RestoreBodyMotor();
                 return;
             }
 
@@ -139,8 +161,6 @@ namespace PancakeDevs.ApexPhysics
             {
                 body.AddForce(-Physics.gravity, ForceMode.Acceleration);
             }
-
-            SetBodyClimbing(true);
         }
 
         public bool TryBeginClimb(ApexPhysicalOpenXRHand hand)
@@ -201,15 +221,14 @@ namespace PancakeDevs.ApexPhysics
                 return false;
             }
 
-            Transform anchorSpace = best.transform;
             state.Active = true;
             state.Hand = hand;
             state.Climbable = best;
-            state.AnchorSpace = anchorSpace;
-            state.LocalAnchor = anchorSpace.InverseTransformPoint(bestPoint);
+            state.AnchorSpace = best.transform;
+            state.LocalAnchor = best.transform.InverseTransformPoint(bestPoint);
             state.PreviousTargetPosition = hand.TrackingTarget.position;
             state.TrackingVelocity = Vector3.zero;
-            SetBodyClimbing(true);
+            SuppressBodyMotor();
             return true;
         }
 
@@ -231,13 +250,16 @@ namespace PancakeDevs.ApexPhysics
                     releaseVelocity = Vector3.ClampMagnitude(releaseVelocity, maximumReleaseSpeed);
                 }
 
-                body.linearVelocity = Vector3.ClampMagnitude(
-                    body.linearVelocity + releaseVelocity,
-                    maximumReleaseSpeed > 0f ? maximumReleaseSpeed : float.PositiveInfinity);
+                body.linearVelocity = maximumReleaseSpeed > 0f
+                    ? Vector3.ClampMagnitude(body.linearVelocity + releaseVelocity, maximumReleaseSpeed)
+                    : body.linearVelocity + releaseVelocity;
                 body.WakeUp();
             }
 
-            SetBodyClimbing(IsClimbing);
+            if (!IsClimbing)
+            {
+                RestoreBodyMotor();
+            }
         }
 
         public bool IsHandClimbing(ApexPhysicalOpenXRHand hand)
@@ -263,7 +285,7 @@ namespace PancakeDevs.ApexPhysics
 
             ClearState(leftHold);
             ClearState(rightHold);
-            SetBodyClimbing(false);
+            RestoreBodyMotor();
 
             if (!applyMomentum || count == 0 || body == null)
             {
@@ -278,6 +300,20 @@ namespace PancakeDevs.ApexPhysics
 
             body.linearVelocity = releaseVelocity;
             body.WakeUp();
+        }
+
+        private void UpdateGrip(ApexPhysicalOpenXRHand hand, bool held, ref bool previous)
+        {
+            if (held && !previous)
+            {
+                TryBeginClimb(hand);
+            }
+            else if (!held && previous)
+            {
+                Release(hand, true);
+            }
+
+            previous = held;
         }
 
         private void UpdateHoldVelocity(HoldState state)
@@ -314,12 +350,13 @@ namespace PancakeDevs.ApexPhysics
                 return null;
             }
 
-            if (hand == leftHand || hand.name.ToLowerInvariant().Contains("left"))
+            string lowerName = hand.name.ToLowerInvariant();
+            if (hand == leftHand || lowerName.Contains("left"))
             {
                 return leftHold;
             }
 
-            if (hand == rightHand || hand.name.ToLowerInvariant().Contains("right"))
+            if (hand == rightHand || lowerName.Contains("right"))
             {
                 return rightHold;
             }
@@ -344,12 +381,23 @@ namespace PancakeDevs.ApexPhysics
             }
         }
 
-        private void SetBodyClimbing(bool climbing)
+        private void SuppressBodyMotor()
         {
-            if (physicalBody != null)
+            if (physicalBody != null && physicalBody.enabled)
             {
-                physicalBody.SetClimbing(climbing);
+                physicalBody.enabled = false;
+                bodyMotorSuppressed = true;
             }
+        }
+
+        private void RestoreBodyMotor()
+        {
+            if (bodyMotorSuppressed && physicalBody != null)
+            {
+                physicalBody.enabled = true;
+            }
+
+            bodyMotorSuppressed = false;
         }
 
         private static void ClearState(HoldState state)
