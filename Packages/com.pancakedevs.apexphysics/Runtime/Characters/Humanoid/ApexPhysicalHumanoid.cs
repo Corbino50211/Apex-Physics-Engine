@@ -33,6 +33,7 @@ namespace PancakeDevs.ApexPhysics
 
         [Header("PC Character System")]
         [SerializeField] private ApexPCPhysicalCharacter pcPhysicalCharacter;
+        [SerializeField] private ApexPCProceduralGait pcProceduralGait;
 
         [Header("Legacy Apex Systems")]
         [SerializeField] private ApexActiveRagdoll activeRagdoll;
@@ -58,6 +59,7 @@ namespace PancakeDevs.ApexPhysics
         public Transform TargetHips => targetHips;
         public ApexRagdollBone PhysicalHips => physicalHips;
         public ApexPCPhysicalCharacter PCPhysicalCharacter => pcPhysicalCharacter;
+        public ApexPCProceduralGait PCProceduralGait => pcProceduralGait;
         public ApexActiveRagdoll ActiveRagdoll => activeRagdoll;
         public ApexHumanoidTargetRootDriver TargetRootDriver => targetRootDriver;
         public ApexHumanoidTrackingDriver TrackingDriver => trackingDriver;
@@ -136,6 +138,18 @@ namespace PancakeDevs.ApexPhysics
             }
 
             pcPhysicalCharacter.Configure(this);
+
+            if (pcProceduralGait == null)
+            {
+                pcProceduralGait = GetComponent<ApexPCProceduralGait>();
+            }
+
+            if (pcProceduralGait == null)
+            {
+                pcProceduralGait = gameObject.AddComponent<ApexPCProceduralGait>();
+            }
+
+            pcProceduralGait.Configure(pcPhysicalCharacter);
             return pcPhysicalCharacter;
         }
 
