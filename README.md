@@ -6,10 +6,10 @@ By [PancakeDevs](https://github.com/Corbino50211).
 > Make Everything Physical.
 
 ![Unity 6000.0+](https://img.shields.io/badge/Unity-6000.0%2B-black)
-![Version 0.4.0](https://img.shields.io/badge/version-0.4.0-blue)
+![Version 0.4.1](https://img.shields.io/badge/version-0.4.1-blue)
 ![Status: Active Development](https://img.shields.io/badge/status-active%20development-orange)
 
-Apex provides grounded PC physical characters with motor-driven locomotion, procedural foot planting, momentum-preserving ragdolls, automatic get-up recovery, force-driven interaction, editor-generated destructible meshes, and reusable physics gameplay components. Everything is modular — no required scene manager, networking library, or render pipeline.
+Apex provides grounded PC physical characters with motor-driven locomotion, procedural foot planting, momentum-preserving ragdolls, automatic get-up recovery, force-driven interaction, editor-generated destructible meshes with selectable runtime triggers, and reusable physics gameplay components. Everything is modular — no required scene manager, networking library, or render pipeline.
 
 ---
 
@@ -22,7 +22,7 @@ Apex is in active development at `0.4.x`. The API is usable but not frozen; mino
 | **Core** | `ApexBody` Rigidbody wrapper, reusable `ApexPhysicsProfile` assets, universal impact events |
 | **Characters** | PC physical humanoids, embedded character motor, natural procedural gait, planted feet, single-owner foot orientation |
 | **Ragdoll** | Active ragdolls, momentum transfer on knockdown, automatic get-up recovery |
-| **Destruction** | Editor-generated mesh fracture, interior polygons, partial impact breakage, momentum-preserving debris |
+| **Destruction** | Editor-generated mesh fracture, interior polygons, manual or force-threshold runtime activation, momentum-preserving debris |
 | **Navigation** | NPC brain with Idle/Wander/Chase modes, motor-driven NavMesh movement, auto-baking |
 | **Interaction** | Force-driven grabbers, grabbables, authored grab points and poses |
 | **Warehouse** | Crates, pallets, spawners, barcode-driven spawnable assets with editor previews |
@@ -88,11 +88,13 @@ The character moves through an embedded Rigidbody motor, plants its feet against
 3. **Apex Physics Engine → Destruction → Fracture Selected Mesh...**
 4. Choose a target chunk count and optional interior material.
 5. Click **Generate / Rebuild Fracture**.
-6. Press Play and strike the object with enough impulse.
+6. On `ApexDestructible`, choose **Manual Only** or **Impact Threshold**.
+7. For automatic breakage, choose **Collision Impulse** or **Estimated Force** and set **Break Threshold**.
+8. Press Play and strike the object hard enough, or trigger it manually.
 
-Apex slices the source mesh in the editor, generates new polygons across the exposed interior surfaces, creates centered debris chunks with convex colliders, and transfers the intact object's motion into released pieces.
+Apex slices the source mesh in the editor, generates new polygons across the exposed interior surfaces, creates centered debris chunks with convex colliders, and transfers the intact object's motion into released pieces. The generated geometry is editor-time; runtime activation can still happen automatically from force.
 
-> The 0.4.0 foundation expects a closed, manifold mesh with real volume. Open planes, paper-thin geometry, and heavily self-intersecting meshes may not fracture correctly.
+> The 0.4.x foundation expects a closed, manifold mesh with real volume. Open planes, paper-thin geometry, and heavily self-intersecting meshes may not fracture correctly.
 
 ---
 
