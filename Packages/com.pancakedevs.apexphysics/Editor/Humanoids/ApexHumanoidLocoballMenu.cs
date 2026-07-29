@@ -53,8 +53,19 @@ namespace PancakeDevs.ApexPhysics.Editor
             character.Configure(humanoid);
             character.Rebuild();
 
+            ApexPCMotorFitter fitter = humanoid.GetComponent<ApexPCMotorFitter>();
+            if (fitter == null)
+            {
+                fitter = Undo.AddComponent<ApexPCMotorFitter>(humanoid.gameObject);
+            }
+
+            Undo.RecordObject(fitter, "Fit Apex PC Character Motor");
+            fitter.Configure(humanoid);
+            fitter.FitNow();
+
             EditorUtility.SetDirty(humanoid);
             EditorUtility.SetDirty(character);
+            EditorUtility.SetDirty(fitter);
 
             if (humanoid.gameObject.scene.IsValid())
             {
