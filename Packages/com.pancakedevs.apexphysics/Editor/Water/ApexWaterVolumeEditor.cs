@@ -5,7 +5,6 @@ using UnityEngine;
 namespace PancakeDevs.ApexPhysics.Editor
 {
     [CustomEditor(typeof(ApexWaterVolume))]
-    [CanEditMultipleObjects]
     public sealed class ApexWaterVolumeEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
@@ -68,12 +67,30 @@ namespace PancakeDevs.ApexPhysics.Editor
                     }
                 }
 
-                if (GUILayout.Button("Recapture Logical Bounds From Current Mesh"))
+                MeshFilter filter = volume.GetComponent<MeshFilter>();
+                string currentMeshPath = filter != null && filter.sharedMesh != null
+                    ? AssetDatabase.GetAssetPath(filter.sharedMesh)
+                    : string.Empty;
+                bool generatedSurfaceIsAssigned =
+                    !string.IsNullOrWhiteSpace(volume.GeneratedSurfaceMeshPath) &&
+                    currentMeshPath == volume.GeneratedSurfaceMeshPath;
+
+                using (new EditorGUI.DisabledScope(generatedSurfaceIsAssigned))
                 {
-                    Undo.RecordObject(volume, "Recapture Apex Water Bounds");
-                    volume.CaptureBoundsFromCurrentMesh();
-                    volume.RefreshBounds();
-                    EditorUtility.SetDirty(volume);
+                    if (GUILayout.Button("Recapture Logical Bounds From Current Mesh"))
+                    {
+                        Undo.RecordObject(volume, "Recapture Apex Water Bounds");
+                        volume.CaptureBoundsFromCurrentMesh();
+                        volume.RefreshBounds();
+                        EditorUtility.SetDirty(volume);
+                    }
+                }
+
+                if (generatedSurfaceIsAssigned)
+                {
+                    EditorGUILayout.HelpBox(
+                        "The current mesh is Apex's thin generated surface, so logical-bound recapture is disabled. Set the Volume fields directly or assign the original source mesh before recapturing.",
+                        MessageType.None);
                 }
 
                 if (GUILayout.Button("Apply Water Properties To Renderer"))
