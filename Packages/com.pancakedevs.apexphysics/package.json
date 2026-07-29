@@ -1,8 +1,8 @@
 {
   "name": "com.pancakedevs.apexphysics",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "displayName": "Apex Physics Engine",
-  "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, natural procedural walking, momentum-preserving ragdolls, editor-generated destructible meshes with manual or force-threshold runtime activation, grabbable objects, barcode-driven crates with Void previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
+  "description": "A PC-first Unity physics framework for grounded physical NPC locomotion, natural procedural walking, momentum-preserving ragdolls, editor-generated destruction, synchronized water volumes, Rigidbody buoyancy, currents, input-agnostic swimming, grabbable objects, barcode-driven crates with Void previews, built-in package updates, navigation, lighting workflows, and reusable physics gameplay. VR character support is planned after the desktop character foundation is stable.",
   "unity": "6000.0",
   "dependencies": {
     "com.unity.ai.navigation": "2.0.9"
@@ -34,6 +34,12 @@
     "interior-geometry",
     "impact-threshold",
     "force-threshold",
+    "water",
+    "buoyancy",
+    "swimming",
+    "waves",
+    "current",
+    "underwater",
     "navigation",
     "npc",
     "ai",
@@ -57,6 +63,11 @@
       "displayName": "Physics Lab",
       "description": "Starter content for testing Apex physics components.",
       "path": "Samples~/PhysicsLab"
+    },
+    {
+      "displayName": "Apex Water URP Visuals",
+      "description": "Optional URP low-poly water shader with depth color, foam, caustics, and refraction.",
+      "path": "Samples~/ApexWaterURP"
     }
   ]
 }
