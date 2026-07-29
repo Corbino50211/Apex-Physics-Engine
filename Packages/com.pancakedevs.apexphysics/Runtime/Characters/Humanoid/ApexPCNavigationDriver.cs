@@ -37,6 +37,7 @@ namespace PancakeDevs.ApexPhysics
         private void OnEnable()
         {
             ResolveReferences();
+            BindNavigatorToMotor();
             Subscribe();
         }
 
@@ -53,7 +54,6 @@ namespace PancakeDevs.ApexPhysics
                 return;
             }
 
-            navigator.ConfigureMovementRoot(motorBody.transform);
             ConfigureAgent();
 
             if (!navigator.HasDestination)
@@ -114,12 +114,7 @@ namespace PancakeDevs.ApexPhysics
                 : null;
             motorBody = owner != null ? owner.MotorBody : null;
 
-            if (navigator != null && motorBody != null)
-            {
-                navigator.ConfigureMovementRoot(motorBody.transform);
-                ConfigureAgent();
-            }
-
+            BindNavigatorToMotor();
             ResetProgressTracking();
             Subscribe();
         }
@@ -147,6 +142,17 @@ namespace PancakeDevs.ApexPhysics
             }
 
             return navigator != null && motorBody != null;
+        }
+
+        private void BindNavigatorToMotor()
+        {
+            if (!ResolveReferences())
+            {
+                return;
+            }
+
+            navigator.ConfigureMovementRoot(motorBody.transform);
+            ConfigureAgent();
         }
 
         private void ConfigureAgent()
@@ -204,7 +210,7 @@ namespace PancakeDevs.ApexPhysics
             ResetProgressTracking();
             if (state == ApexPCCharacterState.Active && navigator != null && motorBody != null)
             {
-                navigator.ConfigureMovementRoot(motorBody.transform);
+                BindNavigatorToMotor();
                 navigator.TryBindToNavMesh();
                 if (navigator.HasDestination)
                 {
