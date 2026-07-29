@@ -1,5 +1,3 @@
-using System;
-using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -9,346 +7,95 @@ namespace PancakeDevs.ApexPhysics.Editor
 {
     internal static class ApexVRPlayerMenu
     {
-        private const string OpenXRPath =
-            "Apex Physics Engine/Player/Create OpenXR VR Player Rig";
-        private const string SteamVRPath =
-            "Apex Physics Engine/Player/Create SteamVR Player Rig From Valve Prefab";
-        private const string ValvePlayerPrefabPath =
-            "Assets/SteamVR/InteractionSystem/Core/Prefabs/Player.prefab";
+        private const string CreatePath =
+            "Apex Physics Engine/Player/Create Apex Physical OpenXR Rig";
 
-        [MenuItem(OpenXRPath, false, 120)]
-        private static void CreateOpenXRRig()
-        {
-            CreateGenericOpenXRRig();
-        }
-
-        [MenuItem(SteamVRPath, false, 121)]
-        private static void CreateSteamVRRig()
-        {
-            GameObject valvePrefab = FindValvePlayerPrefab();
-            if (valvePrefab == null)
-            {
-                EditorUtility.DisplayDialog(
-                    "SteamVR Player Prefab Not Found",
-                    "Apex could not find Valve's Interaction System Player prefab.\n\n" +
-                    "Import the SteamVR Interaction System, then open Window > SteamVR Input, " +
-                    "copy the example JSON files, and click Save and Generate.",
-                    "OK");
-                return;
-            }
-
-            if (CountMissingScripts(valvePrefab) > 0)
-            {
-                EditorUtility.DisplayDialog(
-                    "SteamVR Prefab Has Missing Scripts",
-                    "Valve's Player prefab contains missing scripts, so Apex stopped instead of creating a broken rig.\n\n" +
-                    "Reimport SteamVR, open Window > SteamVR Input, copy the example JSON files, " +
-                    "click Save and Generate, then restart Unity.",
-                    "OK");
-                return;
-            }
-
-            int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("Create Apex SteamVR Player Rig");
-
-            GameObject root = CreatePhysicsRoot("Apex SteamVR Player");
-            CapsuleCollider capsule = root.GetComponent<CapsuleCollider>();
-            ApexVRPlayerRig rig = Undo.AddComponent<ApexVRPlayerRig>(root);
-            ApexVRPlayerMotor motor = Undo.AddComponent<ApexVRPlayerMotor>(root);
-            ApexVRInput input = Undo.AddComponent<ApexVRInput>(root);
-
-            GameObject valvePlayer = PrefabUtility.InstantiatePrefab(valvePrefab) as GameObject;
-            if (valvePlayer == null)
-            {
-                Undo.DestroyObjectImmediate(root);
-                EditorUtility.DisplayDialog(
-                    "SteamVR Rig Creation Failed",
-                    "Unity could not instantiate Valve's Player prefab.",
-                    "OK");
-                return;
-            }
-
-            Undo.RegisterCreatedObjectUndo(valvePlayer, "Instantiate Valve SteamVR Player");
-            valvePlayer.name = "Valve SteamVR Player Tracking";
-            valvePlayer.transform.SetParent(root.transform, false);
-            valvePlayer.transform.localPosition = Vector3.zero;
-            valvePlayer.transform.localRotation = Quaternion.identity;
-
-            Component valvePlayerComponent = FindComponentByFullName(
-                valvePlayer,
-                "Valve.VR.InteractionSystem.Player");
-            if (valvePlayerComponent == null ||
-                !TryResolveValveReferences(
-                    valvePlayerComponent,
-                    valvePlayer,
-                    out Transform head,
-                    out Component leftValveHand,
-                    out Component rightValveHand))
-            {
-                Undo.DestroyObjectImmediate(root);
-                EditorUtility.DisplayDialog(
-                    "SteamVR Player References Missing",
-                    "Apex found Valve's prefab but could not resolve its HMD and two Hand components. " +
-                    "Reimport the SteamVR Interaction System sample and generate its input actions.",
-                    "OK");
-                return;
-            }
-
-            Transform leftTarget = leftValveHand.transform;
-            Transform rightTarget = rightValveHand.transform;
-
-            ApexVRPhysicalHand leftHand = CreatePhysicalHand(
-                root.transform,
-                "Apex Left Physical Hand",
-                leftTarget,
-                capsule,
-                false);
-            ApexVRPhysicalHand rightHand = CreatePhysicalHand(
-                root.transform,
-                "Apex Right Physical Hand",
-                rightTarget,
-                capsule,
-                false);
-
-            ApexSteamVRGrabBridge leftBridge = Undo.AddComponent<ApexSteamVRGrabBridge>(leftHand.gameObject);
-            leftBridge.EditorConfigure(leftValveHand, leftHand.Grabber);
-            ApexSteamVRGrabBridge rightBridge = Undo.AddComponent<ApexSteamVRGrabBridge>(rightHand.gameObject);
-            rightBridge.EditorConfigure(rightValveHand, rightHand.Grabber);
-
-            rig.EditorConfigure(ApexVRBackend.SteamVROpenVR, head, leftHand, rightHand);
-            motor.EditorConfigure(head);
-            // SteamVR grip is handled by ApexSteamVRGrabBridge. Unity XR input remains available
-            // for movement, snap turning, and jump when the OpenVR loader exposes those axes.
-            input.EditorConfigure(motor, null, null);
-
-            Selection.activeGameObject = root;
-            EditorSceneManager.MarkSceneDirty(root.scene);
-            Undo.CollapseUndoOperations(undoGroup);
-
-            Debug.Log(
-                "Created Apex SteamVR Player from Valve's Interaction System Player prefab. " +
-                "Tracking and controller models come from Valve; Apex adds the Rigidbody body, physical hand proxies, and Apex grabbing.",
-                root);
-        }
-
-        private static void CreateGenericOpenXRRig()
+        [MenuItem(CreatePath, false, 120)]
+        private static void CreatePhysicalOpenXRRig()
         {
             int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("Create Apex OpenXR Player Rig");
+            Undo.SetCurrentGroupName("Create Apex Physical OpenXR Rig");
 
-            GameObject root = CreatePhysicsRoot("Apex OpenXR VR Player");
-            CapsuleCollider capsule = root.GetComponent<CapsuleCollider>();
-            ApexVRPlayerRig rig = Undo.AddComponent<ApexVRPlayerRig>(root);
-            ApexVRPlayerMotor motor = Undo.AddComponent<ApexVRPlayerMotor>(root);
-            ApexVRInput input = Undo.AddComponent<ApexVRInput>(root);
-
-            Transform trackingSpace = CreateChild(root.transform, "Tracking Space");
-            Transform head = CreateTrackedTarget(
-                trackingSpace,
-                "Tracked Head",
-                XRNode.CenterEye,
-                new Vector3(0f, 1.7f, 0f));
-
-            Camera camera = Undo.AddComponent<Camera>(head.gameObject);
-            camera.tag = "MainCamera";
-            Undo.AddComponent<AudioListener>(head.gameObject);
-
-            Transform leftTarget = CreateTrackedTarget(
-                trackingSpace,
-                "Left Hand Target",
-                XRNode.LeftHand,
-                new Vector3(-0.25f, 1.3f, 0.35f));
-            Transform rightTarget = CreateTrackedTarget(
-                trackingSpace,
-                "Right Hand Target",
-                XRNode.RightHand,
-                new Vector3(0.25f, 1.3f, 0.35f));
-
-            ApexVRPhysicalHand leftHand = CreatePhysicalHand(
-                root.transform,
-                "Left Physical Hand",
-                leftTarget,
-                capsule,
-                true);
-            ApexVRPhysicalHand rightHand = CreatePhysicalHand(
-                root.transform,
-                "Right Physical Hand",
-                rightTarget,
-                capsule,
-                true);
-
-            rig.EditorConfigure(ApexVRBackend.OpenXR, head, leftHand, rightHand);
-            motor.EditorConfigure(head);
-            input.EditorConfigure(motor, leftHand.Grabber, rightHand.Grabber);
-
-            Selection.activeGameObject = root;
-            EditorSceneManager.MarkSceneDirty(root.scene);
-            Undo.CollapseUndoOperations(undoGroup);
-
-            Debug.Log(
-                "Created Apex OpenXR VR Player. Enable OpenXR in XR Plug-in Management before Play Mode.",
-                root);
-        }
-
-        private static GameObject CreatePhysicsRoot(string name)
-        {
-            GameObject root = new GameObject(name);
-            Undo.RegisterCreatedObjectUndo(root, "Create Apex VR Player Rig");
+            GameObject root = new GameObject("Apex Physical OpenXR Player");
+            Undo.RegisterCreatedObjectUndo(root, "Create Apex Physical OpenXR Rig");
             root.transform.position = FindSpawnPosition();
 
             CapsuleCollider capsule = Undo.AddComponent<CapsuleCollider>(root);
             capsule.radius = 0.3f;
-            capsule.height = 1.8f;
-            capsule.center = new Vector3(0f, 0.9f, 0f);
+            capsule.height = 1.75f;
+            capsule.center = new Vector3(0f, 0.875f, 0f);
 
             Rigidbody body = Undo.AddComponent<Rigidbody>(root);
             body.mass = 80f;
             body.useGravity = true;
             body.isKinematic = false;
             body.interpolation = RigidbodyInterpolation.Interpolate;
-            body.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             body.constraints = RigidbodyConstraints.FreezeRotation;
-            return root;
-        }
 
-        private static GameObject FindValvePlayerPrefab()
-        {
-            GameObject exact = AssetDatabase.LoadAssetAtPath<GameObject>(ValvePlayerPrefabPath);
-            if (exact != null)
-            {
-                return exact;
-            }
+            ApexPhysicalOpenXRBody physicalBody =
+                Undo.AddComponent<ApexPhysicalOpenXRBody>(root);
+            ApexPhysicalOpenXRInput input =
+                Undo.AddComponent<ApexPhysicalOpenXRInput>(root);
 
-            string[] guids = AssetDatabase.FindAssets("Player t:Prefab", new[] { "Assets/SteamVR" });
-            for (int i = 0; i < guids.Length; i++)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
-                string normalized = path.Replace('\\', '/');
-                if (!normalized.Contains("InteractionSystem/Core/Prefabs", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
+            Transform trackingOrigin = CreateChild(root.transform, "OpenXR Tracking Origin");
+            Transform head = CreateTrackedTarget(
+                trackingOrigin,
+                "Tracked Head",
+                XRNode.CenterEye,
+                new Vector3(0f, 1.7f, 0f));
 
-                GameObject candidate = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (candidate != null &&
-                    FindComponentByFullName(candidate, "Valve.VR.InteractionSystem.Player") != null)
-                {
-                    return candidate;
-                }
-            }
+            Camera camera = Undo.AddComponent<Camera>(head.gameObject);
+            camera.tag = "MainCamera";
+            camera.nearClipPlane = 0.05f;
+            Undo.AddComponent<AudioListener>(head.gameObject);
 
-            return null;
-        }
+            Transform leftTarget = CreateTrackedTarget(
+                trackingOrigin,
+                "Left Controller Target",
+                XRNode.LeftHand,
+                new Vector3(-0.25f, 1.3f, 0.35f));
+            Transform rightTarget = CreateTrackedTarget(
+                trackingOrigin,
+                "Right Controller Target",
+                XRNode.RightHand,
+                new Vector3(0.25f, 1.3f, 0.35f));
 
-        private static bool TryResolveValveReferences(
-            Component playerComponent,
-            GameObject playerRoot,
-            out Transform head,
-            out Component leftHand,
-            out Component rightHand)
-        {
-            head = ReadMember(playerComponent, "hmdTransform") as Transform;
-            leftHand = null;
-            rightHand = null;
+            Transform leftShoulder = CreateChild(head, "Left Shoulder Anchor");
+            leftShoulder.localPosition = new Vector3(-0.18f, -0.2f, 0f);
+            Transform rightShoulder = CreateChild(head, "Right Shoulder Anchor");
+            rightShoulder.localPosition = new Vector3(0.18f, -0.2f, 0f);
 
-            object handsValue = ReadMember(playerComponent, "hands");
-            if (handsValue is Array handsArray)
-            {
-                for (int i = 0; i < handsArray.Length; i++)
-                {
-                    Component hand = handsArray.GetValue(i) as Component;
-                    ClassifyValveHand(hand, ref leftHand, ref rightHand);
-                }
-            }
+            ApexPhysicalOpenXRHand leftHand = CreatePhysicalHand(
+                root.transform,
+                "Left Physical Hand",
+                leftTarget,
+                leftShoulder,
+                capsule);
+            ApexPhysicalOpenXRHand rightHand = CreatePhysicalHand(
+                root.transform,
+                "Right Physical Hand",
+                rightTarget,
+                rightShoulder,
+                capsule);
 
-            if (leftHand == null || rightHand == null)
-            {
-                Component[] components = playerRoot.GetComponentsInChildren<Component>(true);
-                for (int i = 0; i < components.Length; i++)
-                {
-                    Component component = components[i];
-                    if (component != null &&
-                        component.GetType().FullName == "Valve.VR.InteractionSystem.Hand")
-                    {
-                        ClassifyValveHand(component, ref leftHand, ref rightHand);
-                    }
-                }
-            }
+            Collider leftCollider = leftHand.GetComponent<Collider>();
+            Collider rightCollider = rightHand.GetComponent<Collider>();
+            Physics.IgnoreCollision(leftCollider, capsule, true);
+            Physics.IgnoreCollision(rightCollider, capsule, true);
+            Physics.IgnoreCollision(leftCollider, rightCollider, true);
 
-            if (head == null)
-            {
-                Camera camera = playerRoot.GetComponentInChildren<Camera>(true);
-                head = camera != null ? camera.transform : null;
-            }
+            physicalBody.EditorConfigure(trackingOrigin, head);
+            input.EditorConfigure(physicalBody, leftHand.Grabber, rightHand.Grabber);
 
-            return head != null && leftHand != null && rightHand != null;
-        }
+            Selection.activeGameObject = root;
+            EditorGUIUtility.PingObject(root);
+            EditorSceneManager.MarkSceneDirty(root.scene);
+            Undo.CollapseUndoOperations(undoGroup);
 
-        private static void ClassifyValveHand(
-            Component hand,
-            ref Component leftHand,
-            ref Component rightHand)
-        {
-            if (hand == null)
-            {
-                return;
-            }
-
-            object handType = ReadMember(hand, "handType");
-            string label = handType != null ? handType.ToString() : hand.name;
-            if (label.IndexOf("left", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                leftHand = hand;
-            }
-            else if (label.IndexOf("right", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                rightHand = hand;
-            }
-        }
-
-        private static object ReadMember(Component component, string name)
-        {
-            Type type = component.GetType();
-            FieldInfo field = type.GetField(
-                name,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (field != null)
-            {
-                return field.GetValue(component);
-            }
-
-            PropertyInfo property = type.GetProperty(
-                name,
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            return property != null ? property.GetValue(component) : null;
-        }
-
-        private static Component FindComponentByFullName(GameObject root, string fullName)
-        {
-            Component[] components = root.GetComponentsInChildren<Component>(true);
-            for (int i = 0; i < components.Length; i++)
-            {
-                Component component = components[i];
-                if (component != null && component.GetType().FullName == fullName)
-                {
-                    return component;
-                }
-            }
-
-            return null;
-        }
-
-        private static int CountMissingScripts(GameObject root)
-        {
-            int missing = 0;
-            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < transforms.Length; i++)
-            {
-                missing += GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(
-                    transforms[i].gameObject);
-            }
-
-            return missing;
+            Debug.Log(
+                "Created Apex Physical OpenXR Rig. Enable OpenXR for the Standalone target before entering Play Mode.",
+                root);
         }
 
         private static Transform CreateTrackedTarget(
@@ -359,48 +106,50 @@ namespace PancakeDevs.ApexPhysics.Editor
         {
             Transform target = CreateChild(parent, name);
             target.localPosition = fallbackLocalPosition;
-            ApexVRTrackedNode trackedNode = Undo.AddComponent<ApexVRTrackedNode>(target.gameObject);
-            trackedNode.EditorConfigure(node);
+            ApexVRTrackedNode tracker = Undo.AddComponent<ApexVRTrackedNode>(target.gameObject);
+            tracker.EditorConfigure(node);
             return target;
         }
 
-        private static ApexVRPhysicalHand CreatePhysicalHand(
+        private static ApexPhysicalOpenXRHand CreatePhysicalHand(
             Transform parent,
             string name,
             Transform trackingTarget,
-            Collider playerCollider,
-            bool createDebugVisual)
+            Transform shoulder,
+            Collider playerCollider)
         {
             Transform handTransform = CreateChild(parent, name);
             handTransform.position = trackingTarget.position;
             handTransform.rotation = trackingTarget.rotation;
 
-            SphereCollider handCollider = Undo.AddComponent<SphereCollider>(handTransform.gameObject);
-            handCollider.radius = 0.09f;
+            SphereCollider collider = Undo.AddComponent<SphereCollider>(handTransform.gameObject);
+            collider.radius = 0.085f;
 
-            Rigidbody handBody = Undo.AddComponent<Rigidbody>(handTransform.gameObject);
-            handBody.mass = 1f;
-            handBody.useGravity = false;
-            handBody.isKinematic = true;
-            handBody.interpolation = RigidbodyInterpolation.Interpolate;
-            handBody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+            Rigidbody rigidbody = Undo.AddComponent<Rigidbody>(handTransform.gameObject);
+            rigidbody.mass = 1.2f;
+            rigidbody.useGravity = false;
+            rigidbody.isKinematic = false;
+            rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+            rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            rigidbody.linearDamping = 0.2f;
+            rigidbody.angularDamping = 0.2f;
 
             ApexGrabber grabber = Undo.AddComponent<ApexGrabber>(handTransform.gameObject);
-            ApexVRPhysicalHand hand = Undo.AddComponent<ApexVRPhysicalHand>(handTransform.gameObject);
-            hand.EditorConfigure(trackingTarget, grabber, handCollider, new[] { playerCollider });
+            ApexPhysicalOpenXRHand hand =
+                Undo.AddComponent<ApexPhysicalOpenXRHand>(handTransform.gameObject);
+            hand.EditorConfigure(trackingTarget, shoulder, grabber);
 
-            if (createDebugVisual)
+            Physics.IgnoreCollision(collider, playerCollider, true);
+
+            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Undo.RegisterCreatedObjectUndo(visual, "Create Apex Physical Hand Visual");
+            visual.name = "Hand Visual";
+            visual.transform.SetParent(handTransform, false);
+            visual.transform.localScale = Vector3.one * 0.16f;
+            Collider generatedCollider = visual.GetComponent<Collider>();
+            if (generatedCollider != null)
             {
-                GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                Undo.RegisterCreatedObjectUndo(visual, "Create Apex VR Hand Visual");
-                visual.name = "Hand Visual";
-                visual.transform.SetParent(handTransform, false);
-                visual.transform.localScale = Vector3.one * 0.16f;
-                Collider generatedCollider = visual.GetComponent<Collider>();
-                if (generatedCollider != null)
-                {
-                    Undo.DestroyObjectImmediate(generatedCollider);
-                }
+                Undo.DestroyObjectImmediate(generatedCollider);
             }
 
             return hand;
@@ -409,18 +158,18 @@ namespace PancakeDevs.ApexPhysics.Editor
         private static Transform CreateChild(Transform parent, string name)
         {
             GameObject child = new GameObject(name);
-            Undo.RegisterCreatedObjectUndo(child, "Create Apex VR Rig Child");
+            Undo.RegisterCreatedObjectUndo(child, "Create Apex Physical OpenXR Child");
             child.transform.SetParent(parent, false);
             return child.transform;
         }
 
         private static Vector3 FindSpawnPosition()
         {
-            SceneView sceneView = SceneView.lastActiveSceneView;
-            if (sceneView != null && sceneView.camera != null)
+            SceneView view = SceneView.lastActiveSceneView;
+            if (view != null && view.camera != null)
             {
-                Vector3 position = sceneView.pivot;
-                position.y = Mathf.Max(position.y, 0.1f);
+                Vector3 position = view.pivot;
+                position.y = Mathf.Max(0.1f, position.y);
                 return position;
             }
 
